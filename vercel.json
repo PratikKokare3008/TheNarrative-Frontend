@@ -1,6 +1,14 @@
 {
   "version": 2,
-  "name": "twosides-frontend",
+  "name": "thenarrative-frontend",
+  "alias": ["thenarrative.vercel.app", "www.thenarrative.app"],
+  "scope": "your-vercel-team",
+  "public": false,
+  "github": {
+    "enabled": true,
+    "autoAlias": true,
+    "silent": false
+  },
   "builds": [
     {
       "src": "package.json",
@@ -12,45 +20,63 @@
   ],
   "routes": [
     {
-      "src": "/static/(.*)",
-      "headers": { 
-        "Cache-Control": "public, max-age=31536000, immutable" 
-      }
-    },
-    {
       "src": "/service-worker.js",
-      "headers": { 
-        "Cache-Control": "public, max-age=0, must-revalidate" 
+      "dest": "/service-worker.js",
+      "headers": {
+        "cache-control": "max-age=0, must-revalidate"
       }
     },
     {
       "src": "/manifest.json",
-      "headers": { 
-        "Cache-Control": "public, max-age=86400" 
+      "dest": "/manifest.json",
+      "headers": {
+        "content-type": "application/json",
+        "cache-control": "max-age=86400"
+      }
+    },
+    {
+      "src": "/static/(.*)",
+      "dest": "/static/$1",
+      "headers": {
+        "cache-control": "max-age=31536000, immutable"
+      }
+    },
+    {
+      "src": "/favicon.ico",
+      "dest": "/favicon.ico",
+      "headers": {
+        "cache-control": "max-age=86400"
+      }
+    },
+    {
+      "src": "/robots.txt",
+      "dest": "/robots.txt",
+      "headers": {
+        "cache-control": "max-age=86400"
+      }
+    },
+    {
+      "src": "/sitemap.xml",
+      "dest": "/sitemap.xml",
+      "headers": {
+        "cache-control": "max-age=86400"
+      }
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "https://thenarrative-backend.onrender.com/api/$1",
+      "headers": {
+        "cache-control": "no-cache, no-store, must-revalidate"
       }
     },
     {
       "src": "/(.*)",
-      "dest": "/index.html"
+      "dest": "/index.html",
+      "headers": {
+        "cache-control": "max-age=0, must-revalidate"
+      }
     }
   ],
-  "env": {
-    "REACT_APP_API_URL": "https://twosides-backend.up.railway.app",
-    "REACT_APP_PYTHON_URL": "https://twosides-python.up.railway.app",
-    "REACT_APP_ENV": "production"
-  },
-  "build": {
-    "env": {
-      "NODE_OPTIONS": "--max-old-space-size=4096",
-      "GENERATE_SOURCEMAP": "false",
-      "INLINE_RUNTIME_CHUNK": "false"
-    }
-  },
-  "functions": {
-    "app/api/**/*.js": {
-      "runtime": "nodejs18.x"
-    }
-  },
   "headers": [
     {
       "source": "/(.*)",
@@ -69,30 +95,19 @@
         },
         {
           "key": "Referrer-Policy",
-          "value": "origin-when-cross-origin"
+          "value": "strict-origin-when-cross-origin"
         },
         {
           "key": "Permissions-Policy",
           "value": "camera=(), microphone=(), geolocation=()"
         }
       ]
-    },
+    }
+  ],
+  "rewrites": [
     {
-      "source": "/api/(.*)",
-      "headers": [
-        {
-          "key": "Access-Control-Allow-Origin",
-          "value": "*"
-        },
-        {
-          "key": "Access-Control-Allow-Methods",
-          "value": "GET, POST, PUT, DELETE, OPTIONS"
-        },
-        {
-          "key": "Access-Control-Allow-Headers",
-          "value": "Content-Type, Authorization"
-        }
-      ]
+      "source": "/api/:path*",
+      "destination": "https://thenarrative-backend.onrender.com/api/:path*"
     }
   ],
   "redirects": [
@@ -100,8 +115,39 @@
       "source": "/home",
       "destination": "/",
       "permanent": true
+    },
+    {
+      "source": "/news",
+      "destination": "/",
+      "permanent": true
     }
   ],
-  "cleanUrls": true,
-  "trailingSlash": false
+  "functions": {
+    "app/api/**": {
+      "maxDuration": 30
+    }
+  },
+  "crons": [],
+  "env": {
+    "REACT_APP_API_URL": "https://thenarrative-backend.onrender.com",
+    "REACT_APP_PYTHON_API_URL": "https://thenarrative-python.onrender.com",
+    "REACT_APP_API_TIMEOUT": "15000",
+    "REACT_APP_ENABLE_PWA": "true",
+    "REACT_APP_ENABLE_ANALYTICS": "true",
+    "REACT_APP_ENABLE_NOTIFICATIONS": "true",
+    "REACT_APP_WEB_VITALS_ENDPOINT": "https://thenarrative-backend.onrender.com/api/analytics/vitals",
+    "REACT_APP_CACHE_DURATION": "300000",
+    "REACT_APP_OFFLINE_CACHE_SIZE": "50",
+    "REACT_APP_VERSION": "2.0.0"
+  },
+  "build": {
+    "env": {
+      "REACT_APP_API_URL": "https://thenarrative-backend.onrender.com",
+      "REACT_APP_PYTHON_API_URL": "https://thenarrative-python.onrender.com",
+      "REACT_APP_ENABLE_PWA": "true",
+      "REACT_APP_ENABLE_ANALYTICS": "true",
+      "GENERATE_SOURCEMAP": "false",
+      "INLINE_RUNTIME_CHUNK": "false"
+    }
+  }
 }
