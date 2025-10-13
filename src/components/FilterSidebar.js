@@ -1,231 +1,581 @@
-import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
+import moment from 'moment';
+import gsap from 'gsap';
 
-const FilterSidebar = ({ filters, onFiltersChange, isOpen, onToggle }) => {
-  const [availableFilters, setAvailableFilters] = useState({
-    categories: [],
-    biases: [],
-    dateRange: {}
-  });
-  
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetchAvailableFilters();
-  }, []);
-
-  const fetchAvailableFilters = async () => {
-    try {
-      const response = await axios.get(`${process.env.REACT_APP_API_URL || 'https://twosides-backend.onrender.com'}/api/news/filters`);
-      setAvailableFilters(response.data);
-    } catch (error) {
-      console.error('Error fetching filter options:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleFilterChange = (filterType, value) => {
-    onFiltersChange({
-      ...filters,
-      [filterType]: value,
-      page: 1 // Reset to first page when filters change
+const FilterSidebar = ({ 
+    activeFilters, 
+    onFiltersChange, 
+    onSearch, 
+    searchQuery, 
+    onSort,
+    sortBy,
+    sortOrder,
+    viewMode,
+    onClose,
+    availableCategories = [],
+    availableSources = [],
+    statistics = null
+}) => {
+    const [localFilters, setLocalFilters] = useState(activeFilters);
+    const [localSearch, setLocalSearch] = useState(searchQuery);
+    const [isExpanded, setIsExpanded] = useState({
+        filters: true,
+        search: true,
+        sorting: true,
+        advanced: false
     });
-  };
-
-  const handleDateChange = (dateType, value) => {
-    onFiltersChange({
-      ...filters,
-      [dateType]: value,
-      page: 1
-    });
-  };
-
-  const resetFilters = () => {
-    onFiltersChange({
-      category: 'all',
-      bias: 'all',
-      sortBy: 'publishedAt',
-      sortOrder: 'desc',
-      dateFrom: '',
-      dateTo: '',
-      search: '',
-      page: 1
-    });
-  };
-
-  const getBiasIcon = (bias) => {
-    switch(bias) {
-      case 'left': return '🟦';
-      case 'center': return '🟪';
-      case 'right': return '🟥';
-      default: return '⚪';
-    }
-  };
-
-  const getCategoryIcon = (category) => {
-    const icons = {
-      politics: '🏛️',
-      business: '💼',
-      technology: '💻',
-      sports: '⚽',
-      entertainment: '🎬',
-      health: '🏥',
-      science: '🔬',
-      world: '🌍',
-      other: '📰'
-    };
-    return icons[category] || '📰';
-  };
-
-  if (loading) {
-    return (
-      <div className={`filter-sidebar ${isOpen ? 'open' : 'closed'}`}>
-        <div className="filter-loading">Loading filters...</div>
-      </div>
+    const [animationEnabled, setAnimationEnabled] = useState(
+        !window.matchMedia('(prefers-reduced-motion: reduce)').matches
     );
-  }
+    
+    const sidebarRef = useRef(null);
+    const searchInputRef = useRef(null);
 
-  return (
-    <>
-      {/* Mobile overlay */}
-      {isOpen && <div className="filter-overlay" onClick={onToggle}></div>}
-      
-      <div className={`filter-sidebar ${isOpen ? 'open' : 'closed'}`}>
-        <div className="filter-header">
-          <h3>
-            <span className="filter-icon">🔍</span>
-            Filters
-          </h3>
-          <button className="close-filters" onClick={onToggle}>
-            ✕
-          </button>
-        </div>
+    // Default categories and sources if not provided
+    const defaultCategories = [
+        'politics', 'business', 'technology', 'science', 'health',
+        'sports', 'entertainment', 'world', 'national', 'local'
+    ];
+    
+    const defaultSources = [
+        'CNN', 'BBC', 'Reuters', 'Associated Press', 'NPR',
+        'Wall Street Journal', 'New York Times', 'Washington Post',
+        'Fox News', 'MSNBC', 'The Guardian', 'Times of India',
+        'Hindu', 'Indian Express', 'NDTV'
+    ];
 
-        <div className="filter-content">
-          {/* Search */}
-          <div className="filter-section">
-            <label>Search Articles</label>
-            <input
-              type="text"
-              placeholder="Search by title, summary, keywords..."
-              value={filters.search || ''}
-              onChange={(e) => handleFilterChange('search', e.target.value)}
-              className="search-input"
-            />
-          </div>
+    const categories = availableCategories.length > 0 ? availableCategories : defaultCategories;
+    const sources = availableSources.length > 0 ? availableSources : defaultSources;
 
-          {/* Category Filter */}
-          <div className="filter-section">
-            <label>Category</label>
-            <div className="filter-options">
-              <button
-                className={`filter-option ${filters.category === 'all' ? 'active' : ''}`}
-                onClick={() => handleFilterChange('category', 'all')}
-              >
-                <span className="option-icon">📂</span>
-                All Categories
-              </button>
-              {availableFilters.categories.map((category) => (
-                <button
-                  key={category}
-                  className={`filter-option ${filters.category === category ? 'active' : ''}`}
-                  onClick={() => handleFilterChange('category', category)}
-                >
-                  <span className="option-icon">{getCategoryIcon(category)}</span>
-                  {category.charAt(0).toUpperCase() + category.slice(1)}
-                </button>
-              ))}
+    // Enhanced entrance animation
+    useEffect(() => {
+        if (!sidebarRef.current || !animationEnabled) return;
+
+        gsap.fromTo(sidebarRef.current,
+            { x: -300, opacity: 0 },
+            { x: 0, opacity: 1, duration: 0.4, ease: 'power2.out' }
+        );
+
+        gsap.fromTo('.filter-section',
+            { opacity: 0, y: 20 },
+            { 
+                opacity: 1, 
+                y: 0, 
+                duration: 0.3,
+                stagger: 0.1,
+                delay: 0.2,
+                ease: 'power1.out'
+            }
+        );
+    }, [animationEnabled]);
+
+    // Sync local filters with props
+    useEffect(() => {
+        setLocalFilters(activeFilters);
+    }, [activeFilters]);
+
+    useEffect(() => {
+        setLocalSearch(searchQuery);
+    }, [searchQuery]);
+
+    // Debounced search
+    const debouncedSearch = useCallback(
+        (() => {
+            let timeoutId;
+            return (query) => {
+                clearTimeout(timeoutId);
+                timeoutId = setTimeout(() => {
+                    onSearch(query);
+                }, 300);
+            };
+        })(),
+        [onSearch]
+    );
+
+    const handleFilterChange = useCallback((filterType, value) => {
+        const newFilters = { ...localFilters, [filterType]: value };
+        setLocalFilters(newFilters);
+        onFiltersChange(newFilters);
+
+        // Analytics
+        if (window.gtag) {
+            window.gtag('event', 'filter_change', {
+                'filter_type': filterType,
+                'filter_value': value,
+                'view_mode': viewMode
+            });
+        }
+    }, [localFilters, onFiltersChange, viewMode]);
+
+    const handleSearchChange = useCallback((e) => {
+        const value = e.target.value;
+        setLocalSearch(value);
+        debouncedSearch(value);
+    }, [debouncedSearch]);
+
+    const handleSortChange = useCallback((field) => {
+        const newOrder = sortBy === field && sortOrder === 'desc' ? 'asc' : 'desc';
+        onSort(field, newOrder);
+    }, [sortBy, sortOrder, onSort]);
+
+    const clearAllFilters = useCallback(() => {
+        const clearedFilters = {
+            category: 'all',
+            bias: 'all',
+            source: 'all',
+            dateRange: 'all',
+            relevantOnly: false
+        };
+        setLocalFilters(clearedFilters);
+        setLocalSearch('');
+        onFiltersChange(clearedFilters);
+        onSearch('');
+
+        // Analytics
+        if (window.gtag) {
+            window.gtag('event', 'filters_cleared', {
+                'view_mode': viewMode
+            });
+        }
+    }, [onFiltersChange, onSearch, viewMode]);
+
+    const toggleSection = useCallback((section) => {
+        setIsExpanded(prev => ({
+            ...prev,
+            [section]: !prev[section]
+        }));
+    }, []);
+
+    // Keyboard shortcuts
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.target.tagName === 'INPUT') return;
+            
+            switch(e.key) {
+                case '/':
+                    e.preventDefault();
+                    searchInputRef.current?.focus();
+                    break;
+                case 'Escape':
+                    if (onClose) onClose();
+                    break;
+                default:
+                    break;
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, [onClose]);
+
+    // Filter statistics
+    const filterStats = useMemo(() => {
+        const activeCount = Object.values(localFilters).filter(
+            value => value !== 'all' && value !== false && value !== ''
+        ).length;
+        
+        return {
+            activeCount,
+            hasActiveFilters: activeCount > 0,
+            searchActive: localSearch.trim().length > 0
+        };
+    }, [localFilters, localSearch]);
+
+    const dateRangeOptions = [
+        { value: 'all', label: 'All Time' },
+        { value: 'today', label: 'Today' },
+        { value: 'yesterday', label: 'Yesterday' },
+        { value: 'week', label: 'This Week' },
+        { value: 'month', label: 'This Month' },
+        { value: 'quarter', label: 'Last 3 Months' },
+        { value: 'year', label: 'This Year' }
+    ];
+
+    const sortOptions = [
+        { field: 'publishedAt', label: 'Publication Date' },
+        { field: 'biasScore', label: 'Bias Score' },
+        { field: 'biasConfidence', label: 'Analysis Confidence' },
+        { field: 'title', label: 'Title (A-Z)' },
+        { field: 'relevanceScore', label: 'Relevance' }
+    ];
+
+    return (
+        <aside ref={sidebarRef} className="filter-sidebar" role="complementary">
+            {/* Sidebar Header */}
+            <div className="sidebar-header">
+                <div className="header-content">
+                    <h2>🎛️ Filters & Search</h2>
+                    <div className="filter-stats">
+                        {filterStats.activeCount > 0 && (
+                            <span className="active-count">
+                                {filterStats.activeCount} active
+                            </span>
+                        )}
+                    </div>
+                </div>
+                
+                {onClose && (
+                    <button 
+                        className="sidebar-close"
+                        onClick={onClose}
+                        aria-label="Close filters"
+                    >
+                        ✕
+                    </button>
+                )}
+
+                {filterStats.hasActiveFilters && (
+                    <button 
+                        className="clear-all-btn"
+                        onClick={clearAllFilters}
+                        aria-label="Clear all filters"
+                    >
+                        🗑️ Clear All
+                    </button>
+                )}
             </div>
-          </div>
 
-          {/* Bias Filter */}
-          <div className="filter-section">
-            <label>Political Leaning</label>
-            <div className="filter-options">
-              <button
-                className={`filter-option ${filters.bias === 'all' ? 'active' : ''}`}
-                onClick={() => handleFilterChange('bias', 'all')}
-              >
-                <span className="option-icon">⚪</span>
-                All Leanings
-              </button>
-              {availableFilters.biases.map((bias) => (
-                <button
-                  key={bias}
-                  className={`filter-option bias-${bias} ${filters.bias === bias ? 'active' : ''}`}
-                  onClick={() => handleFilterChange('bias', bias)}
-                >
-                  <span className="option-icon">{getBiasIcon(bias)}</span>
-                  {bias.charAt(0).toUpperCase() + bias.slice(1)} Leaning
-                </button>
-              ))}
+            <div className="sidebar-content">
+                {/* Enhanced Search Section */}
+                <div className="filter-section search-section">
+                    <button 
+                        className="section-header"
+                        onClick={() => toggleSection('search')}
+                        aria-expanded={isExpanded.search}
+                    >
+                        <span>🔍 Search Articles</span>
+                        <span className={`expand-icon ${isExpanded.search ? 'expanded' : ''}`}>
+                            ▼
+                        </span>
+                    </button>
+                    
+                    {isExpanded.search && (
+                        <div className="section-content">
+                            <div className="search-input-container">
+                                <input
+                                    ref={searchInputRef}
+                                    type="search"
+                                    placeholder="Search articles, titles, content..."
+                                    value={localSearch}
+                                    onChange={handleSearchChange}
+                                    className="search-input"
+                                    aria-label="Search articles"
+                                />
+                                {localSearch && (
+                                    <button 
+                                        className="clear-search"
+                                        onClick={() => {
+                                            setLocalSearch('');
+                                            onSearch('');
+                                        }}
+                                        aria-label="Clear search"
+                                    >
+                                        ✕
+                                    </button>
+                                )}
+                            </div>
+                            <div className="search-tips">
+                                <small>💡 Tip: Press '/' to focus search</small>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Enhanced Filters Section */}
+                <div className="filter-section filters-section">
+                    <button 
+                        className="section-header"
+                        onClick={() => toggleSection('filters')}
+                        aria-expanded={isExpanded.filters}
+                    >
+                        <span>🎯 Filter Articles</span>
+                        <span className={`expand-icon ${isExpanded.filters ? 'expanded' : ''}`}>
+                            ▼
+                        </span>
+                    </button>
+                    
+                    {isExpanded.filters && (
+                        <div className="section-content">
+                            {/* Category Filter */}
+                            <div className="filter-group">
+                                <label className="filter-label">
+                                    📂 Category
+                                </label>
+                                <select
+                                    value={localFilters.category || 'all'}
+                                    onChange={(e) => handleFilterChange('category', e.target.value)}
+                                    className="filter-select"
+                                    aria-label="Filter by category"
+                                >
+                                    <option value="all">All Categories</option>
+                                    {categories.map(category => (
+                                        <option key={category} value={category}>
+                                            {category.charAt(0).toUpperCase() + category.slice(1)}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Bias Filter */}
+                            <div className="filter-group">
+                                <label className="filter-label">
+                                    ⚖️ Political Bias
+                                </label>
+                                <div className="bias-filter-options">
+                                    {[
+                                        { value: 'all', label: 'All Biases', color: '#6b7280' },
+                                        { value: 'left', label: 'Left', color: '#2563eb' },
+                                        { value: 'center', label: 'Center', color: '#059669' },
+                                        { value: 'right', label: 'Right', color: '#dc2626' }
+                                    ].map(option => (
+                                        <button
+                                            key={option.value}
+                                            className={`bias-option ${localFilters.bias === option.value ? 'active' : ''}`}
+                                            onClick={() => handleFilterChange('bias', option.value)}
+                                            style={{ 
+                                                borderColor: localFilters.bias === option.value ? option.color : 'transparent',
+                                                color: localFilters.bias === option.value ? option.color : '#6b7280'
+                                            }}
+                                            aria-label={`Filter by ${option.label.toLowerCase()} bias`}
+                                        >
+                                            {option.label}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Source Filter */}
+                            <div className="filter-group">
+                                <label className="filter-label">
+                                    📺 News Source
+                                </label>
+                                <select
+                                    value={localFilters.source || 'all'}
+                                    onChange={(e) => handleFilterChange('source', e.target.value)}
+                                    className="filter-select"
+                                    aria-label="Filter by news source"
+                                >
+                                    <option value="all">All Sources</option>
+                                    {sources.map(source => (
+                                        <option key={source} value={source}>
+                                            {source}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Date Range Filter */}
+                            <div className="filter-group">
+                                <label className="filter-label">
+                                    📅 Date Range
+                                </label>
+                                <select
+                                    value={localFilters.dateRange || 'all'}
+                                    onChange={(e) => handleFilterChange('dateRange', e.target.value)}
+                                    className="filter-select"
+                                    aria-label="Filter by date range"
+                                >
+                                    {dateRangeOptions.map(option => (
+                                        <option key={option.value} value={option.value}>
+                                            {option.label}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            {/* Relevance Filter */}
+                            <div className="filter-group checkbox-group">
+                                <label className="checkbox-label">
+                                    <input
+                                        type="checkbox"
+                                        checked={localFilters.relevantOnly || false}
+                                        onChange={(e) => handleFilterChange('relevantOnly', e.target.checked)}
+                                        aria-label="Show only politically relevant articles"
+                                    />
+                                    <span className="checkbox-text">
+                                        🎯 Politically Relevant Only
+                                    </span>
+                                </label>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Enhanced Sorting Section */}
+                <div className="filter-section sorting-section">
+                    <button 
+                        className="section-header"
+                        onClick={() => toggleSection('sorting')}
+                        aria-expanded={isExpanded.sorting}
+                    >
+                        <span>🔄 Sort Articles</span>
+                        <span className={`expand-icon ${isExpanded.sorting ? 'expanded' : ''}`}>
+                            ▼
+                        </span>
+                    </button>
+                    
+                    {isExpanded.sorting && (
+                        <div className="section-content">
+                            <div className="sort-options">
+                                {sortOptions.map(option => (
+                                    <button
+                                        key={option.field}
+                                        className={`sort-option ${sortBy === option.field ? 'active' : ''}`}
+                                        onClick={() => handleSortChange(option.field)}
+                                        aria-label={`Sort by ${option.label}`}
+                                    >
+                                        <span>{option.label}</span>
+                                        {sortBy === option.field && (
+                                            <span className="sort-direction">
+                                                {sortOrder === 'desc' ? '↓' : '↑'}
+                                            </span>
+                                        )}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Advanced Filters */}
+                <div className="filter-section advanced-section">
+                    <button 
+                        className="section-header"
+                        onClick={() => toggleSection('advanced')}
+                        aria-expanded={isExpanded.advanced}
+                    >
+                        <span>⚙️ Advanced Filters</span>
+                        <span className={`expand-icon ${isExpanded.advanced ? 'expanded' : ''}`}>
+                            ▼
+                        </span>
+                    </button>
+                    
+                    {isExpanded.advanced && (
+                        <div className="section-content">
+                            {/* Confidence Filter */}
+                            <div className="filter-group">
+                                <label className="filter-label">
+                                    📊 Minimum Confidence
+                                </label>
+                                <input
+                                    type="range"
+                                    min="0"
+                                    max="100"
+                                    value={localFilters.minConfidence || 0}
+                                    onChange={(e) => handleFilterChange('minConfidence', parseInt(e.target.value))}
+                                    className="confidence-slider"
+                                    aria-label="Minimum analysis confidence"
+                                />
+                                <div className="slider-value">
+                                    {localFilters.minConfidence || 0}%
+                                </div>
+                            </div>
+
+                            {/* Bias Score Range */}
+                            <div className="filter-group">
+                                <label className="filter-label">
+                                    ⚖️ Bias Score Range
+                                </label>
+                                <div className="range-inputs">
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        placeholder="Min"
+                                        value={localFilters.minBiasScore || ''}
+                                        onChange={(e) => handleFilterChange('minBiasScore', e.target.value)}
+                                        className="range-input"
+                                        aria-label="Minimum bias score"
+                                    />
+                                    <span>to</span>
+                                    <input
+                                        type="number"
+                                        min="0"
+                                        max="100"
+                                        placeholder="Max"
+                                        value={localFilters.maxBiasScore || ''}
+                                        onChange={(e) => handleFilterChange('maxBiasScore', e.target.value)}
+                                        className="range-input"
+                                        aria-label="Maximum bias score"
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Quality Filters */}
+                            <div className="filter-group checkbox-group">
+                                <label className="checkbox-label">
+                                    <input
+                                        type="checkbox"
+                                        checked={localFilters.hasImage || false}
+                                        onChange={(e) => handleFilterChange('hasImage', e.target.checked)}
+                                    />
+                                    <span className="checkbox-text">📸 Has Image</span>
+                                </label>
+                            </div>
+
+                            <div className="filter-group checkbox-group">
+                                <label className="checkbox-label">
+                                    <input
+                                        type="checkbox"
+                                        checked={localFilters.highQuality || false}
+                                        onChange={(e) => handleFilterChange('highQuality', e.target.checked)}
+                                    />
+                                    <span className="checkbox-text">⭐ High Quality Analysis</span>
+                                </label>
+                            </div>
+                        </div>
+                    )}
+                </div>
+
+                {/* Statistics Section */}
+                {statistics && (
+                    <div className="filter-section stats-section">
+                        <div className="section-header">
+                            <span>📈 Current Results</span>
+                        </div>
+                        <div className="section-content">
+                            <div className="stats-grid">
+                                <div className="stat-item">
+                                    <span className="stat-value">{statistics.totalArticles || 0}</span>
+                                    <span className="stat-label">Articles</span>
+                                </div>
+                                <div className="stat-item">
+                                    <span className="stat-value">{statistics.avgConfidence || 0}%</span>
+                                    <span className="stat-label">Avg Confidence</span>
+                                </div>
+                                {statistics.biasDistribution && (
+                                    <div className="bias-distribution-mini">
+                                        {Object.entries(statistics.biasDistribution).map(([bias, count]) => (
+                                            <div key={bias} className={`bias-mini ${bias}`}>
+                                                <span>{count}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div>
-          </div>
 
-          {/* Sort Options */}
-          <div className="filter-section">
-            <label>Sort By</label>
-            <div className="sort-options">
-              <select
-                value={filters.sortBy || 'publishedAt'}
-                onChange={(e) => handleFilterChange('sortBy', e.target.value)}
-                className="sort-select"
-              >
-                <option value="publishedAt">Published Date</option>
-                <option value="fetchedAt">Added to Site</option>
-                <option value="title">Title</option>
-                <option value="source.name">Source</option>
-              </select>
-              
-              <div className="sort-order">
-                <button
-                  className={`sort-order-btn ${filters.sortOrder === 'desc' ? 'active' : ''}`}
-                  onClick={() => handleFilterChange('sortOrder', 'desc')}
-                >
-                  ⬇️ Newest First
-                </button>
-                <button
-                  className={`sort-order-btn ${filters.sortOrder === 'asc' ? 'active' : ''}`}
-                  onClick={() => handleFilterChange('sortOrder', 'asc')}
-                >
-                  ⬆️ Oldest First
-                </button>
-              </div>
+            {/* Sidebar Footer */}
+            <div className="sidebar-footer">
+                <div className="footer-info">
+                    <small>
+                        💡 Use filters to find specific types of articles
+                    </small>
+                </div>
+                {process.env.NODE_ENV === 'development' && (
+                    <div className="debug-info">
+                        <small>
+                            Active Filters: {filterStats.activeCount} | 
+                            Search: {filterStats.searchActive ? 'Yes' : 'No'}
+                        </small>
+                    </div>
+                )}
             </div>
-          </div>
-
-          {/* Date Range Filter */}
-          <div className="filter-section">
-            <label>Date Range</label>
-            <div className="date-inputs">
-              <input
-                type="date"
-                placeholder="From"
-                value={filters.dateFrom || ''}
-                onChange={(e) => handleDateChange('dateFrom', e.target.value)}
-                className="date-input"
-              />
-              <input
-                type="date"
-                placeholder="To"
-                value={filters.dateTo || ''}
-                onChange={(e) => handleDateChange('dateTo', e.target.value)}
-                className="date-input"
-              />
-            </div>
-          </div>
-
-          {/* Reset Filters */}
-          <div className="filter-actions">
-            <button className="reset-filters-btn" onClick={resetFilters}>
-              🔄 Reset All Filters
-            </button>
-          </div>
-        </div>
-      </div>
-    </>
-  );
+        </aside>
+    );
 };
 
 export default FilterSidebar;
