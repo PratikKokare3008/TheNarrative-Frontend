@@ -1,32 +1,23 @@
-import React, { 
-  useEffect, 
-  useRef, 
-  useState, 
-  useCallback, 
-  Suspense, 
-  lazy,
-  useMemo 
-} from "react";
-import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
-import { ErrorBoundary } from "react-error-boundary";
-import { HelmetProvider, Helmet } from "react-helmet-async";
-import { QueryClient, QueryClientProvider } from "react-query";
-
-import "./App.css";
-import { ThemeProvider } from "./ThemeContext";
-import { gsap } from "gsap";
+import React, { useEffect, useRef, useState, useCallback, Suspense, lazy, useMemo } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { ErrorBoundary } from 'react-error-boundary';
+import { HelmetProvider, Helmet } from 'react-helmet-async';
+import { QueryClient, QueryClientProvider } from 'react-query';
+import './App.css';
+import { ThemeProvider } from './ThemeContext';
+import gsap from 'gsap';
 
 // Performance monitoring
 import { getCLS, getFID, getFCP, getLCP, getTTFB } from 'web-vitals';
 
 // Lazy load components for optimal performance
-const NewsFeed = lazy(() => import("./components/NewsFeed"));
-const SportsSchedule = lazy(() => import("./components/SportsSchedule"));
-const MarketUpdates = lazy(() => import("./components/MarketUpdates"));
-const WeatherWidget = lazy(() => import("./components/WeatherWidget"));
-const ThemeToggle = lazy(() => import("./components/ThemeToggle"));
-const CompareCoverage = lazy(() => import("./components/CompareCoverage"));
-const SidebarWithFilters = lazy(() => import("./components/SidebarWithFilters"));
+const NewsFeed = lazy(() => import('./components/NewsFeed'));
+const SportsSchedule = lazy(() => import('./components/SportsSchedule'));
+const MarketUpdates = lazy(() => import('./components/MarketUpdates'));
+const WeatherWidget = lazy(() => import('./components/WeatherWidget'));
+const ThemeToggle = lazy(() => import('./components/ThemeToggle'));
+const CompareCoverage = lazy(() => import('./components/CompareCoverage'));
+const SidebarWithFilters = lazy(() => import('./components/SidebarWithFilters'));
 
 // Create QueryClient for React Query
 const queryClient = new QueryClient({
@@ -34,460 +25,509 @@ const queryClient = new QueryClient({
     queries: {
       staleTime: 5 * 60 * 1000, // 5 minutes
       cacheTime: 10 * 60 * 1000, // 10 minutes
-      retry: 2,
-      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000),
+      retry: (failureCount, error) => {
+        if (error?.response?.status === 404) return false;
+        return failureCount < 2;
+      },
+      refetchOnWindowFocus: false,
     },
   },
 });
 
-// Enhanced Loading component with animations
-const LoadingSpinner = React.memo(() => (
-  <div className="loading-container" aria-live="polite" role="status">
+// Enhanced Error Fallback Component
+function ErrorFallback({ error, resetErrorBoundary }) {
+  return (
+    <div className="error-boundary" role="alert">
+      <div className="error-content">
+        <h2>Something went wrong</h2>
+        <pre>{error.message}</pre>
+        <button onClick={resetErrorBoundary} className="retry-button">
+          Try again
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// Enhanced Loading Component
+const EnhancedLoadingSpinner = ({ message = "Loading..." }) => (
+  <div className="enhanced-loading-container">
     <div className="loading-spinner">
       <div className="spinner-ring"></div>
       <div className="spinner-ring"></div>
       <div className="spinner-ring"></div>
     </div>
-    <p className="loading-text">Loading The Narrative...</p>
-  </div>
-));
-
-// Error fallback component
-const ErrorFallback = ({ error, resetErrorBoundary }) => (
-  <div className="error-boundary" role="alert">
-    <div className="error-content">
-      <h2>Something went wrong</h2>
-      <p>{error?.message || "An unexpected error occurred"}</p>
-      <button 
-        onClick={resetErrorBoundary}
-        className="error-retry-btn"
-        aria-label="Try again"
-      >
-        Try Again
-      </button>
-    </div>
+    <p className="loading-message">{message}</p>
   </div>
 );
 
-// Performance monitoring hook
-const usePerformanceMonitoring = () => {
-  useEffect(() => {
-    // Web Vitals monitoring
-    getCLS(console.log);
-    getFID(console.log);
-    getFCP(console.log);
-    getLCP(console.log);
-    getTTFB(console.log);
+// Web Vitals Tracking
+function sendToAnalytics(metric) {
+  // Send to your analytics service
+  if (window.gtag) {
+    window.gtag('event', 'web_vitals', {
+      event_category: 'Web Vitals',
+      event_label: metric.name,
+      value: Math.round(metric.name === 'CLS' ? metric.value * 1000 : metric.value),
+      non_interaction: true,
+    });
+  }
+  
+  // Send to backend analytics endpoint
+  if (process.env.REACT_APP_WEB_VITALS_ENDPOINT) {
+    fetch(process.env.REACT_APP_WEB_VITALS_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(metric),
+    }).catch(err => console.warn('Failed to send web vitals:', err));
+  }
+}
 
-    // Custom performance metrics
-    const navigationStart = performance.timing.navigationStart;
-    const domContentLoaded = performance.timing.domContentLoadedEventEnd - navigationStart;
-    const windowLoaded = performance.timing.loadEventEnd - navigationStart;
-
-    console.log(`Performance: DOM loaded in ${domContentLoaded}ms, Window loaded in ${windowLoaded}ms`);
-
-    // Report to analytics (would integrate with actual analytics service)
-    if (window.gtag) {
-      window.gtag('event', 'page_load_time', {
-        value: windowLoaded,
-        custom_parameter: 'twosides_app'
-      });
-    }
-  }, []);
-};
-
-// Enhanced App component with comprehensive optimizations
 function App() {
-  // State management
-  const [currentView, setCurrentView] = useState("news");
-  const [globalFilters, setGlobalFilters] = useState({
+  // Enhanced state management
+  const [activeFilters, setActiveFilters] = useState({
     category: 'all',
     bias: 'all',
-    publication: 'all',
-    sortBy: 'publishedAt',
-    sortOrder: 'desc',
-    dateFrom: '',
-    dateTo: '',
-    search: '',
-    page: 1
+    source: 'all',
+    dateRange: 'all',
+    relevantOnly: false
   });
-  const [selectedStory, setSelectedStory] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [networkStatus, setNetworkStatus] = useState('online');
-
-  // Refs for animations and performance
-  const appRef = useRef();
+  
+  const [viewMode, setViewMode] = useState('articles'); // 'articles' | 'stories' | 'comparison'
+  const [sortBy, setSortBy] = useState('publishedAt');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [selectedArticle, setSelectedArticle] = useState(null);
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [performanceMetrics, setPerformanceMetrics] = useState({});
+  
+  // Refs for animations and performance tracking
+  const appRef = useRef(null);
   const loadTimeRef = useRef(Date.now());
 
-  // Performance monitoring
-  usePerformanceMonitoring();
+  // Enhanced filter management with validation
+  const updateFilters = useCallback((newFilters) => {
+    setActiveFilters(prevFilters => {
+      const updatedFilters = { ...prevFilters, ...newFilters };
+      
+      // Validate filter combinations
+      if (updatedFilters.bias !== 'all' && updatedFilters.category === 'sports') {
+        updatedFilters.bias = 'all'; // Sports articles typically don't have political bias
+      }
+      
+      // Log filter changes for analytics
+      if (window.gtag) {
+        window.gtag('event', 'filter_change', {
+          event_category: 'User Interaction',
+          event_label: Object.keys(newFilters)[0],
+          value: Object.values(newFilters)[0],
+        });
+      }
+      
+      return updatedFilters;
+    });
+  }, []);
 
-  // Network status monitoring
+  // Enhanced search functionality
+  const handleSearch = useCallback((query) => {
+    setSearchQuery(query);
+    
+    // Analytics tracking
+    if (window.gtag && query.trim()) {
+      window.gtag('event', 'search', {
+        search_term: query.trim(),
+      });
+    }
+  }, []);
+
+  // Enhanced sorting with validation
+  const handleSort = useCallback((field, order = 'desc') => {
+    const validSortFields = ['publishedAt', 'biasScore', 'biasConfidence', 'title'];
+    const validOrders = ['asc', 'desc'];
+    
+    if (validSortFields.includes(field) && validOrders.includes(order)) {
+      setSortBy(field);
+      setSortOrder(order);
+      
+      // Analytics tracking
+      if (window.gtag) {
+        window.gtag('event', 'sort_change', {
+          sort_field: field,
+          sort_order: order,
+        });
+      }
+    }
+  }, []);
+
+  // Enhanced view mode switching
+  const handleViewModeChange = useCallback((mode) => {
+    const validModes = ['articles', 'stories', 'comparison'];
+    if (validModes.includes(mode)) {
+      setViewMode(mode);
+      
+      // Close sidebar on mobile when changing views
+      if (window.innerWidth < 768) {
+        setSidebarOpen(false);
+      }
+      
+      // Analytics tracking
+      if (window.gtag) {
+        window.gtag('event', 'view_mode_change', {
+          event_category: 'User Interaction',
+          event_label: mode,
+        });
+      }
+    }
+  }, []);
+
+  // Online/offline detection
   useEffect(() => {
-    const updateNetworkStatus = () => {
-      setNetworkStatus(navigator.onLine ? 'online' : 'offline');
+    const handleOnline = () => {
+      setIsOnline(true);
+      // Refetch data when coming back online
+      queryClient.invalidateQueries();
     };
+    
+    const handleOffline = () => setIsOnline(false);
 
-    window.addEventListener('online', updateNetworkStatus);
-    window.addEventListener('offline', updateNetworkStatus);
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
 
     return () => {
-      window.removeEventListener('online', updateNetworkStatus);
-      window.removeEventListener('offline', updateNetworkStatus);
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
     };
   }, []);
 
-  // Initial app setup and animations
+  // Enhanced GSAP animations with performance optimization
   useEffect(() => {
-    const initializeApp = async () => {
-      try {
-        // Simulate initial data loading
-        await new Promise(resolve => setTimeout(resolve, 1000));
+    if (!appRef.current) return;
 
-        // GSAP entrance animations
-        if (appRef.current) {
-          gsap.fromTo(appRef.current, 
-            { opacity: 0, y: 20 },
-            { 
-              opacity: 1, 
-              y: 0, 
-              duration: 0.8, 
-              ease: "power2.out",
-              delay: 0.2
-            }
-          );
+    // Initial app entrance animation
+    const ctx = gsap.context(() => {
+      gsap.fromTo('.app-header', 
+        { opacity: 0, y: -30 },
+        { opacity: 1, y: 0, duration: 0.8, ease: "power2.out" }
+      );
+
+      gsap.fromTo('.sidebar-container', 
+        { opacity: 0, x: -50 },
+        { opacity: 1, x: 0, duration: 0.6, delay: 0.2, ease: "power2.out" }
+      );
+
+      gsap.fromTo('.main-content', 
+        { opacity: 0, scale: 0.95 },
+        { opacity: 1, scale: 1, duration: 0.8, delay: 0.4, ease: "power2.out" }
+      );
+
+      // Animate theme toggle button
+      gsap.fromTo('.theme-toggle-container', 
+        { scale: 0, rotation: -180 },
+        { scale: 1, rotation: 0, duration: 0.6, delay: 0.6, ease: "back.out(1.7)" }
+      );
+    }, appRef);
+
+    return () => ctx.revert(); // Cleanup
+  }, []);
+
+  // Performance monitoring with Web Vitals
+  useEffect(() => {
+    // Track app load time
+    const loadTime = Date.now() - loadTimeRef.current;
+    setPerformanceMetrics(prev => ({ ...prev, loadTime }));
+
+    // Web Vitals measurements
+    getCLS(sendToAnalytics);
+    getFID(sendToAnalytics);
+    getFCP(sendToAnalytics);
+    getLCP(sendToAnalytics);
+    getTTFB(sendToAnalytics);
+
+    // Custom performance metrics
+    const observer = new PerformanceObserver((list) => {
+      for (const entry of list.getEntries()) {
+        if (entry.entryType === 'measure') {
+          setPerformanceMetrics(prev => ({
+            ...prev,
+            [entry.name]: entry.duration
+          }));
         }
+      }
+    });
 
-        setIsLoading(false);
+    observer.observe({ entryTypes: ['measure'] });
 
-        // Performance tracking
-        const loadTime = Date.now() - loadTimeRef.current;
-        console.log(`App initialized in ${loadTime}ms`);
+    return () => observer.disconnect();
+  }, []);
 
-        // Report to performance monitoring
-        if (window.gtag) {
-          window.gtag('event', 'app_initialization', {
-            value: loadTime,
-            custom_parameter: 'twosides_complete_load'
-          });
-        }
-
-      } catch (err) {
-        console.error('App initialization error:', err);
-        setError(err);
-        setIsLoading(false);
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyPress = (event) => {
+      // Ctrl/Cmd + K for search
+      if ((event.ctrlKey || event.metaKey) && event.key === 'k') {
+        event.preventDefault();
+        // Focus search input (implement this in your search component)
+        const searchInput = document.querySelector('input[type="search"]');
+        if (searchInput) searchInput.focus();
+      }
+      
+      // Escape to close sidebar
+      if (event.key === 'Escape') {
+        setSidebarOpen(false);
       }
     };
 
-    initializeApp();
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
   }, []);
 
-  // Memoized handlers for performance
-  const handleViewChange = useCallback((view) => {
-    setCurrentView(view);
-
-    // Analytics tracking
-    if (window.gtag) {
-      window.gtag('event', 'view_change', {
-        view_name: view,
-        custom_parameter: 'navigation'
-      });
-    }
-  }, []);
-
-  const handleFilterChange = useCallback((newFilters) => {
-    setGlobalFilters(prevFilters => ({
-      ...prevFilters,
-      ...newFilters,
-      page: 1 // Reset page when filters change
-    }));
-  }, []);
-
-  const handleStorySelect = useCallback((story) => {
-    setSelectedStory(story);
-  }, []);
-
-  const handleError = useCallback((error) => {
-    console.error('App error:', error);
-    setError(error);
-
-    // Error reporting
-    if (window.gtag) {
-      window.gtag('event', 'app_error', {
-        error_message: error?.message || 'Unknown error',
-        error_stack: error?.stack || 'No stack trace'
-      });
-    }
-  }, []);
-
-  // Memoized view components for performance
-  const viewComponents = useMemo(() => ({
-    news: (
-      <ErrorBoundary FallbackComponent={ErrorFallback} onError={handleError}>
-        <Suspense fallback={<LoadingSpinner />}>
-          <NewsFeed 
-            filters={globalFilters}
-            onFilterChange={handleFilterChange}
-            onError={handleError}
-            onStorySelect={handleStorySelect}
-          />
-        </Suspense>
-      </ErrorBoundary>
-    ),
-    sports: (
-      <ErrorBoundary FallbackComponent={ErrorFallback} onError={handleError}>
-        <Suspense fallback={<LoadingSpinner />}>
-          <SportsSchedule />
-        </Suspense>
-      </ErrorBoundary>
-    ),
-    markets: (
-      <ErrorBoundary FallbackComponent={ErrorFallback} onError={handleError}>
-        <Suspense fallback={<LoadingSpinner />}>
-          <MarketUpdates />
-        </Suspense>
-      </ErrorBoundary>
-    ),
-    weather: (
-      <ErrorBoundary FallbackComponent={ErrorFallback} onError={handleError}>
-        <Suspense fallback={<LoadingSpinner />}>
-          <WeatherWidget />
-        </Suspense>
-      </ErrorBoundary>
-    )
-  }), [globalFilters, handleFilterChange, handleError, handleStorySelect]);
-
-  // SEO metadata based on current view
-  const seoData = useMemo(() => {
-    const baseTitle = "TwoSides - Unbiased News with AI Bias Detection";
-    const baseDescription = "Professional news aggregation platform with advanced AI-powered bias detection. Get comprehensive perspectives on political and world news.";
-
-    const viewMetadata = {
-      news: {
-        title: `${baseTitle} | Latest News`,
-        description: `${baseDescription} Browse latest political news with bias analysis.`,
-        keywords: "news, bias detection, political news, unbiased reporting, AI analysis"
-      },
-      sports: {
-        title: `Sports News | ${baseTitle}`,
-        description: "Latest sports news, schedules, and updates from around the world.",
-        keywords: "sports news, sports schedules, athletics, games"
-      },
-      markets: {
-        title: `Market Updates | ${baseTitle}`,
-        description: "Real-time financial news and market updates with bias-free analysis.",
-        keywords: "financial news, market updates, business news, economy"
-      },
-      weather: {
-        title: `Weather | ${baseTitle}`,
-        description: "Current weather conditions and forecasts.",
-        keywords: "weather, forecast, conditions, temperature"
+  // Enhanced responsive sidebar handling
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        setSidebarOpen(false); // Close sidebar on desktop
       }
     };
 
-    return viewMetadata[currentView] || viewMetadata.news;
-  }, [currentView]);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
-  // Loading state
-  if (isLoading) {
-    return (
-      <HelmetProvider>
-        <div className="app-loading">
-          <Helmet>
-            <title>Loading - TwoSides News</title>
-            <meta name="description" content="Loading TwoSides news platform..." />
-          </Helmet>
-          <LoadingSpinner />
-        </div>
-      </HelmetProvider>
-    );
-  }
+  // Memoized computed values for performance
+  const hasActiveFilters = useMemo(() => {
+    return Object.values(activeFilters).some(value => value !== 'all' && value !== false && value !== '');
+  }, [activeFilters]);
 
-  // Error state
-  if (error) {
-    return (
-      <HelmetProvider>
-        <div className="app-error">
-          <Helmet>
-            <title>Error - TwoSides News</title>
-            <meta name="description" content="An error occurred while loading TwoSides." />
-          </Helmet>
-          <ErrorFallback 
-            error={error} 
-            resetErrorBoundary={() => {
-              setError(null);
-              window.location.reload();
-            }} 
-          />
-        </div>
-      </HelmetProvider>
-    );
-  }
+  const shouldShowComparison = useMemo(() => {
+    return viewMode === 'comparison' && selectedArticle;
+  }, [viewMode, selectedArticle]);
 
   return (
-    <QueryClientProvider client={queryClient}>
-      <HelmetProvider>
+    <ErrorBoundary
+      FallbackComponent={ErrorFallback}
+      onError={(error, errorInfo) => {
+        console.error('App Error Boundary:', error, errorInfo);
+        // Send error to analytics
+        if (window.gtag) {
+          window.gtag('event', 'exception', {
+            description: error.message,
+            fatal: false,
+          });
+        }
+      }}
+    >
+      <QueryClientProvider client={queryClient}>
         <ThemeProvider>
-          <Router>
-            <div className="App" ref={appRef} data-testid="main-app">
-              {/* SEO and Meta Tags */}
-              <Helmet>
-                <title>{seoData.title}</title>
-                <meta name="description" content={seoData.description} />
-                <meta name="keywords" content={seoData.keywords} />
-                <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-                <meta name="theme-color" content="#21808D" />
-                <meta property="og:title" content={seoData.title} />
-                <meta property="og:description" content={seoData.description} />
-                <meta property="og:type" content="website" />
-                <meta property="og:url" content={window.location.href} />
-                <meta property="og:site_name" content="TwoSides News" />
-                <meta name="twitter:card" content="summary_large_image" />
-                <meta name="twitter:title" content={seoData.title} />
-                <meta name="twitter:description" content={seoData.description} />
-                <link rel="canonical" href={window.location.href} />
+          <HelmetProvider>
+            <Router>
+              <div className="App" ref={appRef}>
+                <Helmet>
+                  <title>TheNarrative - Unbiased News Analysis</title>
+                  <meta name="description" content="Get comprehensive news coverage with AI-powered bias detection and multiple perspectives on every story." />
+                  <meta name="keywords" content="news, bias detection, political analysis, unbiased news, news comparison" />
+                  <meta property="og:title" content="TheNarrative - Unbiased News Analysis" />
+                  <meta property="og:description" content="Comprehensive news coverage with AI-powered bias detection" />
+                  <meta property="og:type" content="website" />
+                  <link rel="canonical" href={window.location.href} />
+                </Helmet>
 
-                {/* Performance and PWA */}
-                <link rel="preconnect" href="https://fonts.googleapis.com" />
-                <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-                <link rel="manifest" href="/manifest.json" />
+                {/* Online/Offline Indicator */}
+                {!isOnline && (
+                  <div className="offline-banner" role="banner">
+                    <span>📡 You're currently offline. Some features may not work.</span>
+                  </div>
+                )}
 
-                {/* Structured Data */}
-                <script type="application/ld+json">
-                  {JSON.stringify({
-                    "@context": "https://schema.org",
-                    "@type": "NewsMediaOrganization",
-                    "name": "TwoSides News",
-                    "description": "AI-powered news aggregation with bias detection",
-                    "url": window.location.origin,
-                    "logo": `${window.location.origin}/logo192.png`,
-                    "sameAs": []
-                  })}
-                </script>
-              </Helmet>
+                {/* Enhanced App Header */}
+                <header className="app-header" role="banner">
+                  <div className="header-content">
+                    <div className="header-left">
+                      <button
+                        className="sidebar-toggle"
+                        onClick={() => setSidebarOpen(!sidebarOpen)}
+                        aria-label="Toggle sidebar"
+                        aria-expanded={sidebarOpen}
+                      >
+                        <span className="hamburger">
+                          <span></span>
+                          <span></span>
+                          <span></span>
+                        </span>
+                      </button>
+                      <h1 className="app-title">TheNarrative</h1>
+                      {hasActiveFilters && (
+                        <span className="active-filters-indicator" title="Filters applied">
+                          🔍
+                        </span>
+                      )}
+                    </div>
+                    
+                    <div className="header-center">
+                      <nav className="view-mode-selector" role="tablist">
+                        <button
+                          className={`view-button ${viewMode === 'articles' ? 'active' : ''}`}
+                          onClick={() => handleViewModeChange('articles')}
+                          role="tab"
+                          aria-selected={viewMode === 'articles'}
+                          aria-label="Articles view"
+                        >
+                          📰 Articles
+                        </button>
+                        <button
+                          className={`view-button ${viewMode === 'stories' ? 'active' : ''}`}
+                          onClick={() => handleViewModeChange('stories')}
+                          role="tab"
+                          aria-selected={viewMode === 'stories'}
+                          aria-label="Stories view"
+                        >
+                          📚 Stories
+                        </button>
+                        <button
+                          className={`view-button ${viewMode === 'comparison' ? 'active' : ''}`}
+                          onClick={() => handleViewModeChange('comparison')}
+                          role="tab"
+                          aria-selected={viewMode === 'comparison'}
+                          aria-label="Comparison view"
+                          disabled={!selectedArticle}
+                        >
+                          ⚖️ Compare
+                        </button>
+                      </nav>
+                    </div>
 
-              {/* Offline Indicator */}
-              {networkStatus === 'offline' && (
-                <div className="offline-indicator" role="alert">
-                  <span>📡</span> You're currently offline. Some features may be limited.
-                </div>
-              )}
+                    <div className="header-right">
+                      <div className="header-widgets">
+                        <Suspense fallback={<div className="widget-loading">⏳</div>}>
+                          <WeatherWidget />
+                        </Suspense>
+                        <Suspense fallback={<div className="widget-loading">⏳</div>}>
+                          <MarketUpdates />
+                        </Suspense>
+                      </div>
+                      <div className="theme-toggle-container">
+                        <Suspense fallback={<div className="toggle-loading">🔄</div>}>
+                          <ThemeToggle />
+                        </Suspense>
+                      </div>
+                    </div>
+                  </div>
+                </header>
 
-              <Routes>
-                {/* Main Application Route */}
-                <Route path="/" element={
-                  <main className="main-content" role="main">
-                    {/* Enhanced Sidebar with Filters */}
-                    <ErrorBoundary FallbackComponent={ErrorFallback} onError={handleError}>
-                      <Suspense fallback={<div className="sidebar-loading">Loading filters...</div>}>
+                {/* Enhanced Main Content Area */}
+                <main className="main-container" role="main">
+                  <div className={`app-layout ${sidebarOpen ? 'sidebar-open' : ''}`}>
+                    {/* Enhanced Sidebar */}
+                    <aside 
+                      className={`sidebar-container ${sidebarOpen ? 'open' : ''}`}
+                      role="complementary"
+                      aria-label="Filters and navigation"
+                    >
+                      <Suspense fallback={<EnhancedLoadingSpinner message="Loading filters..." />}>
                         <SidebarWithFilters
-                          currentView={currentView}
-                          onViewChange={handleViewChange}
-                          filters={globalFilters}
-                          onFilterChange={handleFilterChange}
-                          className="app-sidebar"
+                          activeFilters={activeFilters}
+                          onFiltersChange={updateFilters}
+                          onSearch={handleSearch}
+                          searchQuery={searchQuery}
+                          onSort={handleSort}
+                          sortBy={sortBy}
+                          sortOrder={sortOrder}
+                          viewMode={viewMode}
+                          onClose={() => setSidebarOpen(false)}
+                          performanceMetrics={performanceMetrics}
                         />
                       </Suspense>
-                    </ErrorBoundary>
+                    </aside>
 
-                    {/* Main Content Area */}
-                    <section className="content-area" aria-label={`${currentView} content`}>
-                      {/* Theme Toggle */}
-                      <div className="theme-toggle-container">
-                        <ErrorBoundary FallbackComponent={() => null}>
-                          <Suspense fallback={null}>
-                            <ThemeToggle />
-                          </Suspense>
-                        </ErrorBoundary>
-                      </div>
-
-                      {/* Dynamic View Content */}
-                      {viewComponents[currentView] || viewComponents.news}
-
-                      {/* Compare Coverage Modal */}
-                      {selectedStory && (
-                        <ErrorBoundary FallbackComponent={ErrorFallback} onError={handleError}>
-                          <Suspense fallback={<LoadingSpinner />}>
-                            <CompareCoverage
-                              story={selectedStory}
-                              onClose={() => setSelectedStory(null)}
-                            />
-                          </Suspense>
-                        </ErrorBoundary>
-                      )}
-                    </section>
-                  </main>
-                } />
-
-                {/* Additional Routes for Deep Linking */}
-                <Route path="/news" element={<Navigate to="/" replace />} />
-                <Route path="/sports" element={
-                  <main className="main-content">
-                    <ErrorBoundary FallbackComponent={ErrorFallback}>
-                      <Suspense fallback={<LoadingSpinner />}>
-                        <SportsSchedule />
-                      </Suspense>
-                    </ErrorBoundary>
-                  </main>
-                } />
-                <Route path="/markets" element={
-                  <main className="main-content">
-                    <ErrorBoundary FallbackComponent={ErrorFallback}>
-                      <Suspense fallback={<LoadingSpinner />}>
-                        <MarketUpdates />
-                      </Suspense>
-                    </ErrorBoundary>
-                  </main>
-                } />
-                <Route path="/weather" element={
-                  <main className="main-content">
-                    <ErrorBoundary FallbackComponent={ErrorFallback}>
-                      <Suspense fallback={<LoadingSpinner />}>
-                        <WeatherWidget />
-                      </Suspense>
-                    </ErrorBoundary>
-                  </main>
-                } />
-
-                {/* 404 Route */}
-                <Route path="*" element={
-                  <div className="not-found">
-                    <h1>Page Not Found</h1>
-                    <p>The page you're looking for doesn't exist.</p>
-                    <button onClick={() => window.location.href = '/'}>
-                      Go to Home
-                    </button>
+                    {/* Enhanced Main Content */}
+                    <div className="main-content" role="tabpanel">
+                      <Routes>
+                        <Route 
+                          path="/" 
+                          element={
+                            <Suspense fallback={<EnhancedLoadingSpinner message="Loading news feed..." />}>
+                              {shouldShowComparison ? (
+                                <CompareCoverage
+                                  article={selectedArticle}
+                                  onClose={() => {
+                                    setSelectedArticle(null);
+                                    setViewMode('articles');
+                                  }}
+                                />
+                              ) : (
+                                <NewsFeed
+                                  activeFilters={activeFilters}
+                                  viewMode={viewMode}
+                                  sortBy={sortBy}
+                                  sortOrder={sortOrder}
+                                  searchQuery={searchQuery}
+                                  onArticleSelect={setSelectedArticle}
+                                  selectedArticle={selectedArticle}
+                                  isOnline={isOnline}
+                                />
+                              )}
+                            </Suspense>
+                          } 
+                        />
+                        
+                        <Route 
+                          path="/sports" 
+                          element={
+                            <Suspense fallback={<EnhancedLoadingSpinner message="Loading sports..." />}>
+                              <SportsSchedule />
+                            </Suspense>
+                          } 
+                        />
+                        
+                        <Route 
+                          path="/markets" 
+                          element={
+                            <Suspense fallback={<EnhancedLoadingSpinner message="Loading markets..." />}>
+                              <MarketUpdates />
+                            </Suspense>
+                          } 
+                        />
+                        
+                        {/* Catch-all route */}
+                        <Route path="*" element={<Navigate to="/" replace />} />
+                      </Routes>
+                    </div>
                   </div>
-                } />
-              </Routes>
+                </main>
 
-              {/* Skip to Content Link for Accessibility */}
-              <a href="#main-content" className="skip-link">
-                Skip to main content
-              </a>
+                {/* Enhanced Footer with Performance Info */}
+                {process.env.NODE_ENV === 'development' && (
+                  <footer className="debug-footer">
+                    <div className="debug-info">
+                      <span>🚀 Load: {performanceMetrics.loadTime}ms</span>
+                      <span>📊 Filters: {Object.keys(activeFilters).length}</span>
+                      <span>🔄 Mode: {viewMode}</span>
+                      <span>📶 {isOnline ? 'Online' : 'Offline'}</span>
+                    </div>
+                  </footer>
+                )}
 
-              {/* Service Worker Registration */}
-              <script>
-                {`
-                  if ('serviceWorker' in navigator) {
-                    window.addEventListener('load', () => {
-                      navigator.serviceWorker.register('/sw.js')
-                        .then((registration) => {
-                          console.log('SW registered: ', registration);
-                        })
-                        .catch((registrationError) => {
-                          console.log('SW registration failed: ', registrationError);
-                        });
-                    });
-                  }
-                `}
-              </script>
-            </div>
-          </Router>
+                {/* Sidebar Overlay for Mobile */}
+                {sidebarOpen && (
+                  <div 
+                    className="sidebar-overlay"
+                    onClick={() => setSidebarOpen(false)}
+                    aria-label="Close sidebar"
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        setSidebarOpen(false);
+                      }
+                    }}
+                  />
+                )}
+              </div>
+            </Router>
+          </HelmetProvider>
         </ThemeProvider>
-      </HelmetProvider>
-    </QueryClientProvider>
+      </QueryClientProvider>
+    </ErrorBoundary>
   );
 }
 
