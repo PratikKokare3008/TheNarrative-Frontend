@@ -1,0 +1,60 @@
+{
+  "name": "twosides-frontend",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Professional news aggregation platform with advanced bias detection",
+  "author": "TwoSides News",
+  "license": "MIT",
+  "homepage": "https://twosides-news.vercel.app",
+  "scripts": {
+    "dev": "react-scripts start",
+    "build": "react-scripts build && npm run sitemap",
+    "test": "react-scripts test --coverage --watchAll=false",
+    "eject": "react-scripts eject",
+    "analyze": "npm run build && npx webpack-bundle-analyzer build/static/js/*.js",
+    "sitemap": "node scripts/generate-sitemap.js",
+    "precommit": "lint-staged"
+  },
+  "dependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-scripts": "5.0.1",
+    "axios": "^1.6.0",
+    "moment": "^2.29.4",
+    "gsap": "^3.12.2",
+    "react-infinite-scroll-component": "^6.1.0",
+    "react-loading-skeleton": "^3.3.1",
+    "react-router-dom": "^6.8.0",
+    "react-helmet-async": "^2.0.4",
+    "react-error-boundary": "^4.0.11",
+    "react-query": "^3.39.3",
+    "workbox-webpack-plugin": "^7.0.0",
+    "web-vitals": "^3.5.0"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "^6.0.0",
+    "@testing-library/react": "^13.4.0",
+    "@testing-library/user-event": "^14.5.0",
+    "webpack-bundle-analyzer": "^4.9.1",
+    "lint-staged": "^15.0.0",
+    "prettier": "^3.0.0"
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "lint-staged": {
+    "src/**/*.{js,jsx}": [
+      "prettier --write",
+      "eslint --fix"
+    ]
+  }
+}
