@@ -1,8 +1,7 @@
 {
   "version": 2,
   "name": "thenarrative-frontend",
-  "alias": ["thenarrative.vercel.app", "www.thenarrative.app"],
-  "scope": "your-vercel-team",
+  "alias": ["thenarrative.vercel.app"],
   "public": false,
   "github": {
     "enabled": true,
@@ -44,20 +43,6 @@
     {
       "src": "/favicon.ico",
       "dest": "/favicon.ico",
-      "headers": {
-        "cache-control": "max-age=86400"
-      }
-    },
-    {
-      "src": "/robots.txt",
-      "dest": "/robots.txt",
-      "headers": {
-        "cache-control": "max-age=86400"
-      }
-    },
-    {
-      "src": "/sitemap.xml",
-      "dest": "/sitemap.xml",
       "headers": {
         "cache-control": "max-age=86400"
       }
@@ -122,12 +107,6 @@
       "permanent": true
     }
   ],
-  "functions": {
-    "app/api/**": {
-      "maxDuration": 30
-    }
-  },
-  "crons": [],
   "env": {
     "REACT_APP_API_URL": "https://thenarrative-backend.onrender.com",
     "REACT_APP_PYTHON_API_URL": "https://thenarrative-python.onrender.com",
