@@ -1,13 +1,6 @@
 {
   "version": 2,
   "name": "thenarrative-frontend",
-  "alias": ["thenarrative.vercel.app"],
-  "public": false,
-  "github": {
-    "enabled": true,
-    "autoAlias": true,
-    "silent": false
-  },
   "builds": [
     {
       "src": "package.json",
@@ -17,49 +10,22 @@
       }
     }
   ],
-  "routes": [
+  "rewrites": [
     {
-      "src": "/service-worker.js",
-      "dest": "/service-worker.js",
-      "headers": {
-        "cache-control": "max-age=0, must-revalidate"
-      }
+      "source": "/api/:path*",
+      "destination": "https://thenarrative-backend.onrender.com/api/:path*"
+    }
+  ],
+  "redirects": [
+    {
+      "source": "/home",
+      "destination": "/",
+      "permanent": true
     },
     {
-      "src": "/manifest.json",
-      "dest": "/manifest.json",
-      "headers": {
-        "content-type": "application/json",
-        "cache-control": "max-age=86400"
-      }
-    },
-    {
-      "src": "/static/(.*)",
-      "dest": "/static/$1",
-      "headers": {
-        "cache-control": "max-age=31536000, immutable"
-      }
-    },
-    {
-      "src": "/favicon.ico",
-      "dest": "/favicon.ico",
-      "headers": {
-        "cache-control": "max-age=86400"
-      }
-    },
-    {
-      "src": "/api/(.*)",
-      "dest": "https://thenarrative-backend.onrender.com/api/$1",
-      "headers": {
-        "cache-control": "no-cache, no-store, must-revalidate"
-      }
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/index.html",
-      "headers": {
-        "cache-control": "max-age=0, must-revalidate"
-      }
+      "source": "/news",
+      "destination": "/",
+      "permanent": true
     }
   ],
   "headers": [
@@ -81,30 +47,26 @@
         {
           "key": "Referrer-Policy",
           "value": "strict-origin-when-cross-origin"
-        },
-        {
-          "key": "Permissions-Policy",
-          "value": "camera=(), microphone=(), geolocation=()"
         }
       ]
-    }
-  ],
-  "rewrites": [
-    {
-      "source": "/api/:path*",
-      "destination": "https://thenarrative-backend.onrender.com/api/:path*"
-    }
-  ],
-  "redirects": [
-    {
-      "source": "/home",
-      "destination": "/",
-      "permanent": true
     },
     {
-      "source": "/news",
-      "destination": "/",
-      "permanent": true
+      "source": "/service-worker.js",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "max-age=0, must-revalidate"
+        }
+      ]
+    },
+    {
+      "source": "/static/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "max-age=31536000, immutable"
+        }
+      ]
     }
   ],
   "env": {
@@ -121,10 +83,6 @@
   },
   "build": {
     "env": {
-      "REACT_APP_API_URL": "https://thenarrative-backend.onrender.com",
-      "REACT_APP_PYTHON_API_URL": "https://thenarrative-python.onrender.com",
-      "REACT_APP_ENABLE_PWA": "true",
-      "REACT_APP_ENABLE_ANALYTICS": "true",
       "GENERATE_SOURCEMAP": "false",
       "INLINE_RUNTIME_CHUNK": "false"
     }
