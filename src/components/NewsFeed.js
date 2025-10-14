@@ -11,7 +11,6 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 // Lazy load components for performance
 const NewsSummaryCard = lazy(() => import('./NewsSummaryCard'));
 const CompareCoverage = lazy(() => import('./CompareCoverage'));
-const BiasIndicator = lazy(() => import('./BiasIndicator'));
 
 // Register GSAP plugins
 gsap.registerPlugin(ScrollTrigger);
