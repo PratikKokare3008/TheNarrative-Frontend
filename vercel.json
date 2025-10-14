@@ -83,6 +83,7 @@
   },
   "build": {
     "env": {
+      "CI": "false",
       "GENERATE_SOURCEMAP": "false",
       "INLINE_RUNTIME_CHUNK": "false"
     }
