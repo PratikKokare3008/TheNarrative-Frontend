@@ -198,7 +198,29 @@ export const ThemeProvider = ({ children }) => {
         return () => mediaQuery.removeListener(handleChange);
     }, []);
 
-    // Apply theme to DOM and save preferences
+    // Get current theme configuration with customizations
+    const getCurrentTheme = useCallback(() => {
+        const baseTheme = THEMES[state.actualTheme] || THEMES.light;
+        
+        // Apply customizations
+        if (Object.keys(state.customizations).length > 0) {
+            return {
+                ...baseTheme,
+                colors: {
+                    ...baseTheme.colors,
+                    ...state.customizations.colors
+                },
+                shadows: {
+                    ...baseTheme.shadows,
+                    ...state.customizations.shadows
+                }
+            };
+        }
+        
+        return baseTheme;
+    }, [state.actualTheme, state.customizations]);
+
+    // Apply theme to DOM and save preferences - FIXED: Added missing dependencies
     useEffect(() => {
         const applyTheme = async () => {
             dispatch({ type: THEME_ACTIONS.SET_TRANSITIONING, payload: true });
@@ -263,29 +285,7 @@ export const ThemeProvider = ({ children }) => {
         };
         
         applyTheme();
-    }, [state.actualTheme, state.customizations, state.accessibility]);
-
-    // Get current theme configuration with customizations
-    const getCurrentTheme = useCallback(() => {
-        const baseTheme = THEMES[state.actualTheme] || THEMES.light;
-        
-        // Apply customizations
-        if (Object.keys(state.customizations).length > 0) {
-            return {
-                ...baseTheme,
-                colors: {
-                    ...baseTheme.colors,
-                    ...state.customizations.colors
-                },
-                shadows: {
-                    ...baseTheme.shadows,
-                    ...state.customizations.shadows
-                }
-            };
-        }
-        
-        return baseTheme;
-    }, [state.actualTheme, state.customizations]);
+    }, [state.actualTheme, state.customizations, state.accessibility, state.currentTheme, getCurrentTheme]); // FIXED: Added missing dependencies
 
     // Enhanced theme switching with animation
     const setTheme = useCallback((themeName) => {
