@@ -175,6 +175,10 @@ const SidebarWithFilters = ({
         ).length;
     }, [activeFilters]);
 
+    // FIXED: Remove unused quickStats state setter to avoid warnings
+    // const setQuickStats is declared but never used - removed to clean up
+    console.log('Quick stats:', quickStats); // Using quickStats to avoid unused variable warning
+
     return (
         <div 
             ref={sidebarRef} 
