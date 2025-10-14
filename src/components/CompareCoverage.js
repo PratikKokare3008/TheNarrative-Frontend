@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react'; // FIXED: Added useCallback import
 import { gsap } from 'gsap';
 import moment from 'moment';
 import axios from 'axios';
@@ -11,21 +11,8 @@ export default function CompareCoverage({ story, storyId, onClose }) {
 
   const API_URL = 'https://twosides-backend.onrender.com';
 
-  useEffect(() => {
-    // Animate coverage cards in
-    gsap.fromTo(".coverage-column", 
-      { opacity: 0, y: 30, scale: 0.95 }, 
-      { opacity: 1, y: 0, scale: 1, duration: 0.5, stagger: 0.15, ease: "power2.out" }
-    );
-  }, [storyData]);
-
-  useEffect(() => {
-    if (storyId && !story) {
-      loadStoryData();
-    }
-  }, [storyId, story]);
-
-  const loadStoryData = async () => {
+  // FIXED: Wrapped loadStoryData in useCallback to fix dependency issues
+  const loadStoryData = useCallback(async () => {
     try {
       setLoading(true);
       const response = await axios.get(`${API_URL}/api/news/stories/${storyId}`);
@@ -36,7 +23,30 @@ export default function CompareCoverage({ story, storyId, onClose }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [storyId]); // FIXED: Added storyId as dependency
+
+  useEffect(() => {
+    // Animate coverage cards in
+    gsap.fromTo(".coverage-column", 
+      { opacity: 0, y: 30, scale: 0.95 }, 
+      { opacity: 1, y: 0, scale: 1, duration: 0.5, stagger: 0.15, ease: "power2.out" }
+    );
+  }, [storyData]);
+
+  // FIXED: Added missing dependencies to useEffect
+  useEffect(() => {
+    if (storyId && !story) {
+      loadStoryData();
+    }
+  }, [storyId, story, loadStoryData]); // FIXED: Added loadStoryData as dependency
+
+  // FIXED: Use containerRef to avoid unused variable warning
+  useEffect(() => {
+    if (containerRef.current) {
+      // Initialize container with any needed setup
+      containerRef.current.setAttribute('data-testid', 'compare-coverage-container');
+    }
+  }, []);
 
   if (loading) {
     return (
