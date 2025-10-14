@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useRef, useEffect } from 'react';
-import { useTheme } from './ThemeContext';
+import { useTheme } from '../ThemeContext';
 import gsap from 'gsap';
 
 const ThemeToggle = ({ 
@@ -218,3 +218,4 @@ const ThemeToggle = ({
 };
 
 export default ThemeToggle;
+
