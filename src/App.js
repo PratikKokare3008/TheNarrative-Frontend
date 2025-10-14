@@ -53,9 +53,7 @@ function ErrorFallback({ error, resetErrorBoundary }) {
 const EnhancedLoadingSpinner = ({ message = "Loading..." }) => (
   <div className="enhanced-loading-container">
     <div className="loading-spinner">
-      <div className="spinner-ring"></div>
-      <div className="spinner-ring"></div>
-      <div className="spinner-ring"></div>
+      <div className="spinner-ring"><div></div><div></div><div></div><div></div></div>
     </div>
     <p className="loading-message">{message}</p>
   </div>
@@ -65,7 +63,7 @@ const EnhancedLoadingSpinner = ({ message = "Loading..." }) => (
 function sendToAnalytics(metric) {
   // Send to your analytics service
   if (window.gtag) {
-    window.gtag('event', 'web_vitals', {
+    window.gtag('event', 'web-vitals', {
       event_category: 'Web Vitals',
       event_label: metric.name,
       value: Math.round(metric.name === 'CLS' ? metric.value * 1000 : metric.value),
@@ -92,8 +90,7 @@ function App() {
     dateRange: 'all',
     relevantOnly: false
   });
-  
-  const [viewMode, setViewMode] = useState('articles'); // 'articles' | 'stories' | 'comparison'
+  const [viewMode, setViewMode] = useState('articles'); // articles | stories | comparison
   const [sortBy, setSortBy] = useState('publishedAt');
   const [sortOrder, setSortOrder] = useState('desc');
   const [searchQuery, setSearchQuery] = useState('');
@@ -101,7 +98,7 @@ function App() {
   const [selectedArticle, setSelectedArticle] = useState(null);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [performanceMetrics, setPerformanceMetrics] = useState({});
-  
+
   // Refs for animations and performance tracking
   const appRef = useRef(null);
   const loadTimeRef = useRef(Date.now());
@@ -167,7 +164,7 @@ function App() {
       setViewMode(mode);
       
       // Close sidebar on mobile when changing views
-      if (window.innerWidth < 768) {
+      if (window.innerWidth <= 768) {
         setSidebarOpen(false);
       }
       
@@ -188,7 +185,6 @@ function App() {
       // Refetch data when coming back online
       queryClient.invalidateQueries();
     };
-    
     const handleOffline = () => setIsOnline(false);
 
     window.addEventListener('online', handleOnline);
@@ -207,23 +203,21 @@ function App() {
     // Initial app entrance animation
     const ctx = gsap.context(() => {
       gsap.fromTo('.app-header', 
-        { opacity: 0, y: -30 },
+        { opacity: 0, y: -30 }, 
         { opacity: 1, y: 0, duration: 0.8, ease: "power2.out" }
       );
-
       gsap.fromTo('.sidebar-container', 
-        { opacity: 0, x: -50 },
+        { opacity: 0, x: -50 }, 
         { opacity: 1, x: 0, duration: 0.6, delay: 0.2, ease: "power2.out" }
       );
-
       gsap.fromTo('.main-content', 
-        { opacity: 0, scale: 0.95 },
+        { opacity: 0, scale: 0.95 }, 
         { opacity: 1, scale: 1, duration: 0.8, delay: 0.4, ease: "power2.out" }
       );
-
+      
       // Animate theme toggle button
       gsap.fromTo('.theme-toggle-container', 
-        { scale: 0, rotation: -180 },
+        { scale: 0, rotation: -180 }, 
         { scale: 1, rotation: 0, duration: 0.6, delay: 0.6, ease: "back.out(1.7)" }
       );
     }, appRef);
@@ -248,14 +242,10 @@ function App() {
     const observer = new PerformanceObserver((list) => {
       for (const entry of list.getEntries()) {
         if (entry.entryType === 'measure') {
-          setPerformanceMetrics(prev => ({
-            ...prev,
-            [entry.name]: entry.duration
-          }));
+          setPerformanceMetrics(prev => ({ ...prev, [entry.name]: entry.duration }));
         }
       }
     });
-
     observer.observe({ entryTypes: ['measure'] });
 
     return () => observer.disconnect();
@@ -285,7 +275,7 @@ function App() {
   // Enhanced responsive sidebar handling
   useEffect(() => {
     const handleResize = () => {
-      if (window.innerWidth >= 768) {
+      if (window.innerWidth > 768) {
         setSidebarOpen(false); // Close sidebar on desktop
       }
     };
@@ -296,7 +286,9 @@ function App() {
 
   // Memoized computed values for performance
   const hasActiveFilters = useMemo(() => {
-    return Object.values(activeFilters).some(value => value !== 'all' && value !== false && value !== '');
+    return Object.values(activeFilters).some(value => 
+      value !== 'all' && value !== false && value !== ''
+    );
   }, [activeFilters]);
 
   const shouldShowComparison = useMemo(() => {
@@ -335,7 +327,7 @@ function App() {
                 {/* Online/Offline Indicator */}
                 {!isOnline && (
                   <div className="offline-banner" role="banner">
-                    <span>📡 You're currently offline. Some features may not work.</span>
+                    <span>You're currently offline. Some features may not work.</span>
                   </div>
                 )}
 
@@ -343,7 +335,7 @@ function App() {
                 <header className="app-header" role="banner">
                   <div className="header-content">
                     <div className="header-left">
-                      <button
+                      <button 
                         className="sidebar-toggle"
                         onClick={() => setSidebarOpen(!sidebarOpen)}
                         aria-label="Toggle sidebar"
@@ -358,32 +350,32 @@ function App() {
                       <h1 className="app-title">TheNarrative</h1>
                       {hasActiveFilters && (
                         <span className="active-filters-indicator" title="Filters applied">
-                          🔍
+                          <span></span>
                         </span>
                       )}
                     </div>
-                    
+
                     <div className="header-center">
                       <nav className="view-mode-selector" role="tablist">
-                        <button
+                        <button 
                           className={`view-button ${viewMode === 'articles' ? 'active' : ''}`}
                           onClick={() => handleViewModeChange('articles')}
                           role="tab"
                           aria-selected={viewMode === 'articles'}
                           aria-label="Articles view"
                         >
-                          📰 Articles
+                          Articles
                         </button>
-                        <button
+                        <button 
                           className={`view-button ${viewMode === 'stories' ? 'active' : ''}`}
                           onClick={() => handleViewModeChange('stories')}
                           role="tab"
                           aria-selected={viewMode === 'stories'}
                           aria-label="Stories view"
                         >
-                          📚 Stories
+                          Stories
                         </button>
-                        <button
+                        <button 
                           className={`view-button ${viewMode === 'comparison' ? 'active' : ''}`}
                           onClick={() => handleViewModeChange('comparison')}
                           role="tab"
@@ -391,22 +383,22 @@ function App() {
                           aria-label="Comparison view"
                           disabled={!selectedArticle}
                         >
-                          ⚖️ Compare
+                          Compare
                         </button>
                       </nav>
                     </div>
 
                     <div className="header-right">
                       <div className="header-widgets">
-                        <Suspense fallback={<div className="widget-loading">⏳</div>}>
+                        <Suspense fallback={<div className="widget-loading"><div></div></div>}>
                           <WeatherWidget />
                         </Suspense>
-                        <Suspense fallback={<div className="widget-loading">⏳</div>}>
+                        <Suspense fallback={<div className="widget-loading"><div></div></div>}>
                           <MarketUpdates />
                         </Suspense>
                       </div>
                       <div className="theme-toggle-container">
-                        <Suspense fallback={<div className="toggle-loading">🔄</div>}>
+                        <Suspense fallback={<div className="toggle-loading"><div></div></div>}>
                           <ThemeToggle />
                         </Suspense>
                       </div>
@@ -417,14 +409,14 @@ function App() {
                 {/* Enhanced Main Content Area */}
                 <main className="main-container" role="main">
                   <div className={`app-layout ${sidebarOpen ? 'sidebar-open' : ''}`}>
-                    {/* Enhanced Sidebar */}
+                    
+                    {/* Enhanced Sidebar - FIXED: Removed redundant role="complementary" */}
                     <aside 
                       className={`sidebar-container ${sidebarOpen ? 'open' : ''}`}
-                      role="complementary"
                       aria-label="Filters and navigation"
                     >
                       <Suspense fallback={<EnhancedLoadingSpinner message="Loading filters..." />}>
-                        <SidebarWithFilters
+                        <SidebarWithFilters 
                           activeFilters={activeFilters}
                           onFiltersChange={updateFilters}
                           onSearch={handleSearch}
@@ -442,51 +434,42 @@ function App() {
                     {/* Enhanced Main Content */}
                     <div className="main-content" role="tabpanel">
                       <Routes>
-                        <Route 
-                          path="/" 
-                          element={
-                            <Suspense fallback={<EnhancedLoadingSpinner message="Loading news feed..." />}>
-                              {shouldShowComparison ? (
-                                <CompareCoverage
-                                  article={selectedArticle}
-                                  onClose={() => {
-                                    setSelectedArticle(null);
-                                    setViewMode('articles');
-                                  }}
-                                />
-                              ) : (
-                                <NewsFeed
-                                  activeFilters={activeFilters}
-                                  viewMode={viewMode}
-                                  sortBy={sortBy}
-                                  sortOrder={sortOrder}
-                                  searchQuery={searchQuery}
-                                  onArticleSelect={setSelectedArticle}
-                                  selectedArticle={selectedArticle}
-                                  isOnline={isOnline}
-                                />
-                              )}
-                            </Suspense>
-                          } 
-                        />
+                        <Route path="/" element={
+                          <Suspense fallback={<EnhancedLoadingSpinner message="Loading news feed..." />}>
+                            {shouldShowComparison ? (
+                              <CompareCoverage 
+                                article={selectedArticle}
+                                onClose={() => {
+                                  setSelectedArticle(null);
+                                  setViewMode('articles');
+                                }}
+                              />
+                            ) : (
+                              <NewsFeed 
+                                activeFilters={activeFilters}
+                                viewMode={viewMode}
+                                sortBy={sortBy}
+                                sortOrder={sortOrder}
+                                searchQuery={searchQuery}
+                                onArticleSelect={setSelectedArticle}
+                                selectedArticle={selectedArticle}
+                                isOnline={isOnline}
+                              />
+                            )}
+                          </Suspense>
+                        } />
                         
-                        <Route 
-                          path="/sports" 
-                          element={
-                            <Suspense fallback={<EnhancedLoadingSpinner message="Loading sports..." />}>
-                              <SportsSchedule />
-                            </Suspense>
-                          } 
-                        />
+                        <Route path="/sports" element={
+                          <Suspense fallback={<EnhancedLoadingSpinner message="Loading sports..." />}>
+                            <SportsSchedule />
+                          </Suspense>
+                        } />
                         
-                        <Route 
-                          path="/markets" 
-                          element={
-                            <Suspense fallback={<EnhancedLoadingSpinner message="Loading markets..." />}>
-                              <MarketUpdates />
-                            </Suspense>
-                          } 
-                        />
+                        <Route path="/markets" element={
+                          <Suspense fallback={<EnhancedLoadingSpinner message="Loading markets..." />}>
+                            <MarketUpdates />
+                          </Suspense>
+                        } />
                         
                         {/* Catch-all route */}
                         <Route path="*" element={<Navigate to="/" replace />} />
@@ -499,10 +482,10 @@ function App() {
                 {process.env.NODE_ENV === 'development' && (
                   <footer className="debug-footer">
                     <div className="debug-info">
-                      <span>🚀 Load: {performanceMetrics.loadTime}ms</span>
-                      <span>📊 Filters: {Object.keys(activeFilters).length}</span>
-                      <span>🔄 Mode: {viewMode}</span>
-                      <span>📶 {isOnline ? 'Online' : 'Offline'}</span>
+                      <span>Load: {performanceMetrics.loadTime}ms</span>
+                      <span>Filters: {Object.keys(activeFilters).length}</span>
+                      <span>Mode: {viewMode}</span>
+                      <span>{isOnline ? 'Online' : 'Offline'}</span>
                     </div>
                   </footer>
                 )}
