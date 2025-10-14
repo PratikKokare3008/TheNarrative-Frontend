@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef } from 'react'; // FIXED: Removed unused useEffect import
 import { useQuery } from 'react-query';
 import axios from 'axios';
 import moment from 'moment';
