@@ -27,14 +27,13 @@ const CACHE_DURATION = parseInt(process.env.REACT_APP_CACHE_DURATION) || 300000;
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000;
 
-// 🎯 ENHANCED PERFORMANCE MONITORING
+// 🎯 ENHANCED PERFORMANCE MONITORING - FIXED: Added dependency array to useLayoutEffect
 const usePerformanceMonitoring = (componentName) => {
-    const renderStartTime = useRef(Date.now());
     const mountTime = useRef(Date.now());
     const [performanceMetrics, setPerformanceMetrics] = useState({});
 
     useLayoutEffect(() => {
-        const renderTime = Date.now() - renderStartTime.current;
+        const renderTime = Date.now() - mountTime.current;
         const totalTime = Date.now() - mountTime.current;
         
         setPerformanceMetrics({
@@ -77,9 +76,9 @@ const usePerformanceMonitoring = (componentName) => {
         if (renderTime > 300) {
             console.error(`🚨 Critical render time in ${componentName}: ${renderTime}ms`);
         }
-    });
+    }, [componentName]); // FIXED: Added missing dependency
 
-    return { renderStartTime, performanceMetrics };
+    return { performanceMetrics }; // FIXED: Removed unused renderStartTime
 };
 
 // 🎨 ENHANCED LOADING STATES
@@ -641,14 +640,13 @@ const NewsFeed = ({
     onViewModeChange
 }) => {
     // 📊 Performance and State Management
-    const { renderStartTime, performanceMetrics } = usePerformanceMonitoring('NewsFeed');
+    const { performanceMetrics } = usePerformanceMonitoring('NewsFeed');
     
     // 🎛️ Enhanced State Management
     const [localSelectedArticle, setLocalSelectedArticle] = useState(selectedArticle);
     const [showComparison, setShowComparison] = useState(false);
     const [viewStats, setViewStats] = useState({});
     const [lastInteraction, setLastInteraction] = useState(Date.now());
-    const [loadingMore, setLoadingMore] = useState(false);
     const [retryAttempts, setRetryAttempts] = useState({});
     const [cacheStats, setCacheStats] = useState({ hits: 0, misses: 0 });
     const [animationEnabled, setAnimationEnabled] = useState(true);
@@ -1018,12 +1016,9 @@ const NewsFeed = ({
         }
     );
 
-    // 📊 ENHANCED STATISTICS QUERY
+    // 📊 ENHANCED STATISTICS QUERY - FIXED: Removed unused variables
     const {
-        data: statsData,
-        isLoading: isStatsLoading,
-        error: statsError,
-        refetch: refetchStats
+        data: statsData
     } = useQuery(
         ['news-stats'],
         newsAPI.fetchStats,
@@ -1446,7 +1441,6 @@ const NewsFeed = ({
                                         className="news-card"
                                         data-article-id={article._id}
                                         onClick={() => handleArticleClick(article)}
-                                        role="article"
                                         tabIndex={0}
                                         onKeyDown={(e) => {
                                             if (e.key === 'Enter' || e.key === ' ') {
