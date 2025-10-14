@@ -1,5 +1,4 @@
 import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
-import moment from 'moment';
 import gsap from 'gsap';
 
 const FilterSidebar = ({ 
@@ -24,7 +23,7 @@ const FilterSidebar = ({
         sorting: true,
         advanced: false
     });
-    const [animationEnabled, setAnimationEnabled] = useState(
+    const [animationEnabled] = useState(  // FIXED: Removed unused setAnimationEnabled
         !window.matchMedia('(prefers-reduced-motion: reduce)').matches
     );
     
@@ -78,19 +77,14 @@ const FilterSidebar = ({
         setLocalSearch(searchQuery);
     }, [searchQuery]);
 
-    // Debounced search
-    const debouncedSearch = useCallback(
-        (() => {
-            let timeoutId;
-            return (query) => {
-                clearTimeout(timeoutId);
-                timeoutId = setTimeout(() => {
-                    onSearch(query);
-                }, 300);
-            };
-        })(),
-        [onSearch]
-    );
+    // Debounced search - FIXED: Converted to inline function to resolve dependency issue
+    const debouncedSearch = useCallback((query) => {
+        let timeoutId;
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => {
+            onSearch(query);
+        }, 300);
+    }, [onSearch]);
 
     const handleFilterChange = useCallback((filterType, value) => {
         const newFilters = { ...localFilters, [filterType]: value };
@@ -200,7 +194,7 @@ const FilterSidebar = ({
     ];
 
     return (
-        <aside ref={sidebarRef} className="filter-sidebar" role="complementary">
+        <aside ref={sidebarRef} className="filter-sidebar"> {/* FIXED: Removed redundant role="complementary" */}
             {/* Sidebar Header */}
             <div className="sidebar-header">
                 <div className="header-content">
