@@ -445,11 +445,10 @@ const NewsSummaryCard = memo(({
   }
 
   return (
-    <article 
+    <article  // FIXED: Removed redundant role="article"
       ref={cardRef}
       className={cardClasses}
       data-article-id={article._id}
-      role="article"
       aria-labelledby={`article-title-${article._id}`}
     >
       {/* Article Image */}
