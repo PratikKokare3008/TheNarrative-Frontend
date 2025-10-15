@@ -5,219 +5,228 @@
     <link rel="icon" href="%PUBLIC_URL%/favicon.ico" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="theme-color" content="#2563eb" />
-    
-    <!-- Enhanced Meta Tags -->
-    <meta name="description" content="TheNarrative - Advanced AI-powered news bias detection platform. Get comprehensive political analysis, multiple perspectives, and unbiased news coverage with real-time bias detection." />
-    <meta name="keywords" content="news, bias detection, political analysis, unbiased news, news comparison, media bias, political perspectives, AI news analysis" />
-    <meta name="author" content="TheNarrative" />
-    <meta name="robots" content="index, follow" />
-    <meta name="language" content="en" />
-    <meta name="rating" content="general" />
+    <meta name="description" content="TheNarrative - Advanced news bias detection platform with comprehensive political analysis. Get unbiased news insights powered by AI." />
+    <meta name="keywords" content="news, bias detection, political analysis, media bias, journalism, AI news analysis" />
+    <meta name="author" content="Pratik Kokare" />
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://thenarrative.vercel.app/" />
     <meta property="og:title" content="TheNarrative - Unbiased News Analysis" />
-    <meta property="og:description" content="Get comprehensive news coverage with AI-powered bias detection and multiple perspectives on every story." />
-    <meta property="og:image" content="%PUBLIC_URL%/og-image.jpg" />
+    <meta property="og:description" content="Advanced news bias detection platform with comprehensive political analysis. Get unbiased news insights powered by AI." />
+    <meta property="og:image" content="%PUBLIC_URL%/og-image.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:site_name" content="TheNarrative" />
-    
+
     <!-- Twitter -->
     <meta property="twitter:card" content="summary_large_image" />
     <meta property="twitter:url" content="https://thenarrative.vercel.app/" />
     <meta property="twitter:title" content="TheNarrative - Unbiased News Analysis" />
-    <meta property="twitter:description" content="Get comprehensive news coverage with AI-powered bias detection and multiple perspectives on every story." />
-    <meta property="twitter:image" content="%PUBLIC_URL%/twitter-card.jpg" />
-    <meta property="twitter:creator" content="@thenarrative" />
+    <meta property="twitter:description" content="Advanced news bias detection platform with comprehensive political analysis. Get unbiased news insights powered by AI." />
+    <meta property="twitter:image" content="%PUBLIC_URL%/og-image.png" />
+
+    <!-- Apple Touch Icon -->
+    <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     
-    <!-- Additional Meta Tags -->
-    <meta name="application-name" content="TheNarrative" />
-    <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <meta name="apple-mobile-web-app-title" content="TheNarrative" />
-    <meta name="format-detection" content="telephone=no" />
-    <meta name="mobile-web-app-capable" content="yes" />
-    <meta name="msapplication-config" content="%PUBLIC_URL%/browserconfig.xml" />
-    <meta name="msapplication-TileColor" content="#2563eb" />
-    <meta name="msapplication-tap-highlight" content="no" />
-    
-    <!-- PWA Meta Tags -->
-    <link rel="apple-touch-icon" sizes="180x180" href="%PUBLIC_URL%/apple-touch-icon.png" />
-    <link rel="icon" type="image/png" sizes="32x32" href="%PUBLIC_URL%/favicon-32x32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="%PUBLIC_URL%/favicon-16x16.png" />
+    <!-- Progressive Web App -->
     <link rel="manifest" href="%PUBLIC_URL%/manifest.json" />
-    <link rel="mask-icon" href="%PUBLIC_URL%/safari-pinned-tab.svg" color="#2563eb" />
-    <link rel="shortcut icon" href="%PUBLIC_URL%/favicon.ico" />
-    
-    <!-- Preconnect to external domains -->
-    <link rel="preconnect" href="https://thenarrative-backend.onrender.com" />
-    <link rel="preconnect" href="https://thenarrative-python.onrender.com" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    
-    <!-- DNS Prefetch for performance -->
-    <link rel="dns-prefetch" href="//thenarrative-backend.onrender.com" />
-    <link rel="dns-prefetch" href="//thenarrative-python.onrender.com" />
-    <link rel="dns-prefetch" href="//www.google-analytics.com" />
     
     <!-- Canonical URL -->
     <link rel="canonical" href="https://thenarrative.vercel.app/" />
     
-    <!-- CSS Preload -->
-    <link rel="preload" href="%PUBLIC_URL%/static/css/main.css" as="style" />
+    <!-- DNS Prefetch for performance -->
+    <link rel="dns-prefetch" href="//thenarrative-backend.onrender.com">
+    <link rel="dns-prefetch" href="//narrative-ml-cloudrun-53060812465.asia-south2.run.app">
+    <link rel="dns-prefetch" href="//fonts.googleapis.com">
+    
+    <!-- Preconnect for critical resources -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     
     <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
     
-    <!-- Critical CSS Inlined -->
-    <style>
-      /* Critical above-the-fold CSS */
-      * {
-        box-sizing: border-box;
+    <!-- Security headers -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://www.googletagmanager.com https://www.google-analytics.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://thenarrative-backend.onrender.com https://narrative-ml-cloudrun-53060812465.asia-south2.run.app https://www.google-analytics.com; frame-src 'self';">
+    
+    <title>TheNarrative - Unbiased News Analysis</title>
+    
+    <!-- Structured Data -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "TheNarrative",
+      "description": "Advanced news bias detection platform with comprehensive political analysis",
+      "url": "https://thenarrative.vercel.app",
+      "applicationCategory": "NewsApplication",
+      "operatingSystem": "Any",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "author": {
+        "@type": "Person",
+        "name": "Pratik Kokare"
+      }
+    }
+    </script>
+    
+    <!-- Performance monitoring -->
+    <script>
+      window.performanceMetrics = {
+        navigationStart: performance.now(),
+        marks: {}
+      };
+      
+      // Mark critical points
+      function markPerformance(name) {
+        window.performanceMetrics.marks[name] = performance.now();
       }
       
-      body {
-        margin: 0;
-        font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-          'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-          sans-serif;
-        -webkit-font-smoothing: antialiased;
-        -moz-osx-font-smoothing: grayscale;
-        line-height: 1.5;
-      }
-      
-      code {
-        font-family: 'JetBrains Mono', source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
-          monospace;
-      }
-      
-      /* Loading screen */
-      .initial-loading {
-        position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: #ffffff;
+      markPerformance('htmlStart');
+    </script>
+  </head>
+  <body>
+    <noscript>
+      <div style="
         display: flex;
         flex-direction: column;
-        justify-content: center;
         align-items: center;
-        z-index: 9999;
-      }
-      
-      .initial-loading-spinner {
-        width: 40px;
-        height: 40px;
-        border: 3px solid #e2e8f0;
-        border-top: 3px solid #2563eb;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-      }
-      
-      .initial-loading-text {
-        margin-top: 16px;
-        color: #64748b;
-        font-size: 14px;
-      }
-      
+        justify-content: center;
+        height: 100vh;
+        font-family: Inter, system-ui, -apple-system, sans-serif;
+        text-align: center;
+        padding: 20px;
+        background: #f8fafc;
+      ">
+        <div style="
+          max-width: 500px;
+          background: white;
+          padding: 40px;
+          border-radius: 12px;
+          box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+        ">
+          <h1 style="color: #1e293b; margin-bottom: 16px; font-size: 24px;">
+            📰 TheNarrative
+          </h1>
+          <p style="color: #64748b; margin-bottom: 24px; line-height: 1.6;">
+            You need to enable JavaScript to run TheNarrative. Our news bias detection platform requires JavaScript for the interactive features and real-time analysis.
+          </p>
+          <div style="
+            padding: 16px;
+            background: #fef3c7;
+            border-radius: 8px;
+            border-left: 4px solid #f59e0b;
+          ">
+            <p style="color: #92400e; margin: 0; font-size: 14px;">
+              <strong>⚠️ JavaScript Required:</strong><br>
+              Please enable JavaScript in your browser settings and refresh the page to access TheNarrative.
+            </p>
+          </div>
+          <div style="margin-top: 24px; font-size: 14px; color: #94a3b8;">
+            <p>Having trouble? Contact us at support@thenarrative.app</p>
+          </div>
+        </div>
+      </div>
+    </noscript>
+    
+    <!-- Loading screen -->
+    <div id="initial-loader" style="
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: #0f172a;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.3s ease;
+    ">
+      <div style="text-align: center; color: white;">
+        <div style="
+          width: 60px;
+          height: 60px;
+          border: 4px solid #334155;
+          border-top: 4px solid #3b82f6;
+          border-radius: 50%;
+          animation: spin 1s linear infinite;
+          margin: 0 auto 20px;
+        "></div>
+        <h2 style="margin: 0 0 8px; font-family: Inter, sans-serif; font-weight: 600;">
+          TheNarrative
+        </h2>
+        <p style="margin: 0; opacity: 0.7; font-family: Inter, sans-serif;">
+          Loading unbiased news analysis...
+        </p>
+      </div>
+    </div>
+    
+    <style>
       @keyframes spin {
         0% { transform: rotate(0deg); }
         100% { transform: rotate(360deg); }
       }
       
-      /* Dark theme support */
-      @media (prefers-color-scheme: dark) {
-        .initial-loading {
-          background: #0f172a;
-        }
-        
-        .initial-loading-text {
-          color: #94a3b8;
-        }
-        
-        .initial-loading-spinner {
-          border-color: #334155;
-          border-top-color: #3b82f6;
-        }
+      /* Hide loader when React loads */
+      .app-loaded #initial-loader {
+        opacity: 0;
+        pointer-events: none;
       }
     </style>
     
-    <title>TheNarrative - Unbiased News Analysis</title>
-  </head>
-  <body>
-    <noscript>
-      <div style="padding: 20px; text-align: center; font-family: Arial, sans-serif;">
-        <h2>JavaScript Required</h2>
-        <p>TheNarrative requires JavaScript to function properly. Please enable JavaScript in your browser to use this application.</p>
-        <p>If you're having trouble, please contact our support team.</p>
-      </div>
-    </noscript>
-    
-    <!-- Initial Loading Screen -->
-    <div id="initial-loading" class="initial-loading">
-      <div class="initial-loading-spinner"></div>
-      <div class="initial-loading-text">Loading TheNarrative...</div>
-    </div>
-    
-    <!-- React Root -->
+    <!-- Main React Root -->
     <div id="root"></div>
     
-    <!-- Remove loading screen when React loads -->
+    <!-- Google Analytics (if enabled) -->
     <script>
-      // Hide loading screen when React mounts
-      window.addEventListener('DOMContentLoaded', function() {
-        setTimeout(function() {
-          const loadingScreen = document.getElementById('initial-loading');
-          if (loadingScreen) {
-            loadingScreen.style.opacity = '0';
-            setTimeout(function() {
-              loadingScreen.style.display = 'none';
-            }, 300);
-          }
-        }, 1000);
-      });
-      
-      // Error handling
-      window.addEventListener('error', function(e) {
-        console.error('Application error:', e.error);
-        const loadingScreen = document.getElementById('initial-loading');
-        if (loadingScreen) {
-          loadingScreen.innerHTML = `
-            <div style="text-align: center; color: #dc2626;">
-              <h3>❌ Application Error</h3>
-              <p>Failed to load TheNarrative. Please refresh the page.</p>
-              <button onclick="window.location.reload()" style="padding: 8px 16px; margin-top: 16px; cursor: pointer;">
-                🔄 Refresh Page
-              </button>
-            </div>
-          `;
-        }
-      });
-    </script>
-    
-    <!-- Performance monitoring -->
-    <script>
-      // Web Vitals monitoring
-      if (typeof window !== 'undefined') {
-        window.performance.mark('app-start');
+      if (window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+        // Google Analytics 4
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-XXXXXXXXXX'); // Replace with your GA4 ID
+        
+        // Load GA script
+        var script = document.createElement('script');
+        script.src = 'https://www.googletagmanager.com/gtag/js?id=G-XXXXXXXXXX';
+        script.async = true;
+        document.head.appendChild(script);
       }
     </script>
     
-    <!-- Analytics (Google Analytics 4) -->
-    <script async src="https://www.googletagmanager.com/gtag/js?id=GA_MEASUREMENT_ID"></script>
+    <!-- Remove initial loader when React app loads -->
     <script>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', 'GA_MEASUREMENT_ID', {
-        page_title: 'TheNarrative',
-        page_location: window.location.href,
-        custom_map: {
-          'custom_parameter': 'dimension1'
-        }
+      // Remove loader when DOM is loaded
+      document.addEventListener('DOMContentLoaded', function() {
+        setTimeout(function() {
+          var loader = document.getElementById('initial-loader');
+          if (loader) {
+            loader.style.display = 'none';
+          }
+        }, 2000);
+      });
+      
+      // Performance monitoring
+      window.addEventListener('load', function() {
+        markPerformance('windowLoad');
+        
+        // Report loading performance
+        setTimeout(function() {
+          if (window.gtag && window.performanceMetrics) {
+            var metrics = window.performanceMetrics;
+            var loadTime = metrics.marks.windowLoad - metrics.navigationStart;
+            
+            gtag('event', 'page_load_time', {
+              event_category: 'Performance',
+              value: Math.round(loadTime),
+              custom_parameter: 'initial_load'
+            });
+          }
+        }, 1000);
       });
     </script>
   </body>
