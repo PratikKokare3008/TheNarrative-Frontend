@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo, useLayoutEffect, Suspense, lazy } from 'react';
 import { useQuery, useQueryClient, useInfiniteQuery } from 'react-query';
 import InfiniteScroll from 'react-infinite-scroll-component';
-import { Skeleton } from 'react-loading-skeleton';
+import Skeleton from 'react-loading-skeleton'; // ✅ FIXED: Default import, not named import
 import 'react-loading-skeleton/dist/skeleton.css';
 import axios from 'axios';
 import moment from 'moment';
@@ -80,7 +80,7 @@ const usePerformanceMonitoring = (componentName) => {
     }
   }, [componentName]); // FIXED: Added missing dependency
 
-  return performanceMetrics; // FIXED: Removed unused renderStartTime
+  return performanceMetrics;
 };
 
 // 🎨 ENHANCED LOADING STATES
@@ -599,9 +599,8 @@ const NewsFeed = ({
   // 🔗 ENHANCED API SERVICE with comprehensive error handling and caching
   const newsAPI = useMemo(() => ({
     fetchArticles: async (pageParam = 1) => {
-      const cacheKey = `articles-${JSON.stringify(activeFilters)}-${searchQuery}-${sortBy}-${sortOrder}-${pageParam}`;
-      
       // Check cache first
+      const cacheKey = `articles-${JSON.stringify(activeFilters)}-${searchQuery}-${sortBy}-${sortOrder}-${pageParam}`;
       const cachedData = queryClient.getQueryData(['articles-cached', cacheKey]);
       if (cachedData && (Date.now() - cachedData.timestamp < CACHE_DURATION)) {
         setCacheStats(prev => ({ ...prev, hits: prev.hits + 1 }));
@@ -759,6 +758,13 @@ const NewsFeed = ({
     },
 
     fetchStats: async () => {
+      const cacheKey = 'news-stats';
+      // Check cache
+      const cachedData = queryClient.getQueryData(['stats-cached', cacheKey]);
+      if (cachedData && (Date.now() - cachedData.timestamp < 120000)) { // 2 minutes cache
+        return cachedData.data;
+      }
+
       try {
         const response = await axios.get(`${API_URL}/api/news/stats`, {
           timeout: 10000,
@@ -766,6 +772,12 @@ const NewsFeed = ({
             'Accept': 'application/json',
             'Cache-Control': 'max-age=120'
           }
+        });
+
+        // Cache stats
+        queryClient.setQueryData(['stats-cached', cacheKey], {
+          data: response.data,
+          timestamp: Date.now()
         });
 
         return response.data;
@@ -778,35 +790,24 @@ const NewsFeed = ({
     // ✨ Enhanced bias analysis with comprehensive fallback - NOW USES CLOUD RUN API!
     fetchBiasAnalysis: async (articleId, articleContent, articleSource) => {
       try {
-        // 🚀 First try your NEW working Cloud Run API
-        console.log(`🧠 Analyzing bias for article ${articleId} using Cloud Run API...`);
-        const response = await axios.post(`${BIAS_API_URL}/analyze`, {
-          text: articleContent
-        }, {
+        // Try backend first (may have cached result)
+        const response = await axios.get(`${API_URL}/api/analyze/${articleId}`, {
           timeout: API_TIMEOUT / 2,
           headers: {
             'Accept': 'application/json',
-            'Content-Type': 'application/json'
+            'X-Analysis-Mode': 'comprehensive'
           }
         });
 
-        console.log(`✅ Bias analysis successful for article ${articleId}`);
+        console.log(`✅ Backend bias analysis successful for article ${articleId}`);
+        return response.data;
+      } catch (backendError) {
+        console.warn(`⚠️ Backend bias analysis failed, trying Cloud Run API:`, backendError.message);
         
-        return {
-          bias: response.data.bias_type || 'center',
-          confidence: response.data.confidence || 0.85,
-          score: response.data.bias_score ? Math.round(response.data.bias_score * 100) : 50,
-          explanation: response.data.explanation || 'AI-powered bias analysis'
-        };
-      } catch (error) {
-        console.warn(`⚠️ Cloud Run bias analysis failed for article ${articleId}, trying fallback:`, error.message);
-        
-        // Fallback to your original Python API if available
+        // 🚀 Fallback to your NEW working Cloud Run API
         try {
-          const fallbackResponse = await axios.post(`${PYTHON_API_URL}/analyze`, {
-            text: articleContent,
-            articleId,
-            source: articleSource
+          const response = await axios.post(`${BIAS_API_URL}/analyze`, {
+            text: articleContent
           }, {
             timeout: API_TIMEOUT,
             headers: {
@@ -815,29 +816,22 @@ const NewsFeed = ({
             }
           });
           
-          console.log(`✅ Fallback bias analysis successful for article ${articleId}`);
-          return fallbackResponse.data;
-        } catch (fallbackError) {
-          console.error(`❌ Both bias analysis methods failed for article ${articleId}`);
+          console.log(`✅ Cloud Run bias analysis successful for article ${articleId}`);
           
-          // Final fallback - simple keyword analysis
-          const text = articleContent.toLowerCase();
-          const leftKeywords = ['progressive', 'liberal', 'democrat', 'social justice', 'climate change'];
-          const rightKeywords = ['conservative', 'republican', 'traditional', 'law and order', 'free market'];
-          
-          const leftCount = leftKeywords.reduce((count, word) => count + (text.includes(word) ? 1 : 0), 0);
-          const rightCount = rightKeywords.reduce((count, word) => count + (text.includes(word) ? 1 : 0), 0);
-          
-          let bias = 'center';
-          if (leftCount > rightCount) bias = 'left';
-          else if (rightCount > leftCount) bias = 'right';
-          
+          // Transform Cloud Run response to match frontend format
           return {
-            bias,
-            confidence: 0.3,
-            score: bias === 'left' ? 25 : bias === 'right' ? 75 : 50,
-            explanation: 'Fallback keyword-based analysis'
+            bias: response.data.bias_type || 'center',
+            confidence: response.data.confidence || 0.85,
+            score: response.data.bias_score ? Math.round(response.data.bias_score * 100) : 50,
+            explanation: response.data.explanation || 'AI-powered bias analysis'
           };
+        } catch (cloudRunError) {
+          console.error(`❌ Both bias analysis services failed:`, {
+            backend: backendError.message,
+            cloudRun: cloudRunError.message,
+            articleId
+          });
+          throw new Error('Bias analysis temporarily unavailable - both services failed');
         }
       }
     },
@@ -935,7 +929,7 @@ const NewsFeed = ({
     }
   );
 
-  // 📊 ENHANCED STATISTICS QUERY - FIXED: Removed unused variables
+  // 📊 ENHANCED STATISTICS QUERY
   const { data: statsData } = useQuery(
     'news-stats',
     newsAPI.fetchStats,
@@ -1208,6 +1202,7 @@ const NewsFeed = ({
     if (process.env.NODE_ENV === 'development') {
       console.log('🔧 NewsFeed Debug Info:', {
         API_URL,
+        PYTHON_API_URL,
         BIAS_API_URL, // NEW: Added bias API URL to debug info
         viewMode,
         isLoading,
@@ -1401,21 +1396,6 @@ const NewsFeed = ({
                 isMobile
               }, null, 2)}</pre>
             </details>
-          </div>
-        )}
-
-        {/* Stories Pagination (if needed) */}
-        {storiesData?.pagination?.hasMore && (
-          <div className="stories-pagination">
-            <button 
-              onClick={() => {
-                // Implement pagination for stories if needed
-                console.log('Load more stories');
-              }}
-              className="load-more-stories-btn"
-            >
-              📚 Load More Story Groups
-            </button>
           </div>
         )}
       </div>
