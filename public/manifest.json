@@ -1,7 +1,7 @@
 {
   "short_name": "TheNarrative",
   "name": "TheNarrative - Unbiased News Analysis",
-  "description": "Advanced AI-powered news bias detection platform with comprehensive political analysis and multiple perspectives",
+  "description": "Advanced news bias detection platform with comprehensive political analysis",
   "icons": [
     {
       "src": "favicon.ico",
@@ -9,115 +9,65 @@
       "type": "image/x-icon"
     },
     {
-      "src": "icon-192.png",
+      "src": "logo192.png",
       "type": "image/png",
       "sizes": "192x192",
-      "purpose": "maskable any"
+      "purpose": "any maskable"
     },
     {
-      "src": "icon-256.png",
-      "type": "image/png",
-      "sizes": "256x256",
-      "purpose": "any"
-    },
-    {
-      "src": "icon-384.png",
-      "type": "image/png",
-      "sizes": "384x384",
-      "purpose": "any"
-    },
-    {
-      "src": "icon-512.png",
+      "src": "logo512.png",
       "type": "image/png",
       "sizes": "512x512",
-      "purpose": "maskable any"
-    },
-    {
-      "src": "apple-touch-icon.png",
-      "type": "image/png",
-      "sizes": "180x180",
-      "purpose": "any"
+      "purpose": "any maskable"
     }
   ],
-  "start_url": "/",
+  "start_url": ".",
   "display": "standalone",
   "theme_color": "#2563eb",
-  "background_color": "#ffffff",
+  "background_color": "#0f172a",
   "orientation": "portrait-primary",
   "scope": "/",
-  "lang": "en-US",
-  "dir": "ltr",
-  "categories": ["news", "politics", "education", "productivity"],
-  "iarc_rating_id": "e84b072d-71b3-4d3e-86ae-31a8ce4e53b7",
-  "prefer_related_applications": false,
-  "related_applications": [],
+  "lang": "en",
+  "categories": ["news", "politics", "analysis"],
   "screenshots": [
     {
       "src": "screenshot-wide.png",
       "sizes": "1280x720",
       "type": "image/png",
-      "platform": "wide",
-      "label": "News feed with bias analysis"
+      "form_factor": "wide"
     },
     {
-      "src": "screenshot-mobile.png",
-      "sizes": "375x812",
+      "src": "screenshot-narrow.png",
+      "sizes": "640x1136",
       "type": "image/png",
-      "platform": "narrow",
-      "label": "Mobile news browsing experience"
+      "form_factor": "narrow"
     }
   ],
   "shortcuts": [
     {
       "name": "Latest News",
-      "short_name": "Latest",
+      "short_name": "News",
       "description": "View the latest news articles",
-      "url": "/?view=latest",
-      "icons": [{ "src": "icon-96.png", "sizes": "96x96" }]
+      "url": "/news",
+      "icons": [{ "src": "icon-news.png", "sizes": "96x96" }]
     },
     {
-      "name": "Search News",
-      "short_name": "Search",
-      "description": "Search for specific news topics",
-      "url": "/?search=true",
-      "icons": [{ "src": "search-icon.png", "sizes": "96x96" }]
+      "name": "Sports Updates",
+      "short_name": "Sports",
+      "description": "Check sports schedules and scores",
+      "url": "/sports",
+      "icons": [{ "src": "icon-sports.png", "sizes": "96x96" }]
     },
     {
-      "name": "Compare Coverage",
-      "short_name": "Compare",
-      "description": "Compare different news perspectives",
-      "url": "/?view=comparison",
-      "icons": [{ "src": "compare-icon.png", "sizes": "96x96" }]
+      "name": "Market Data",
+      "short_name": "Markets",
+      "description": "View market updates and stock prices",
+      "url": "/markets",
+      "icons": [{ "src": "icon-markets.png", "sizes": "96x96" }]
     }
   ],
-  "share_target": {
-    "action": "/share-target/",
-    "method": "GET",
-    "params": {
-      "title": "title",
-      "text": "text",
-      "url": "url"
-    }
-  },
-  "file_handlers": [
-    {
-      "action": "/handle-file",
-      "accept": {
-        "text/plain": [".txt"],
-        "application/pdf": [".pdf"]
-      }
-    }
-  ],
-  "protocol_handlers": [
-    {
-      "protocol": "web+thenarrative",
-      "url": "/handle-protocol?url=%s"
-    }
-  ],
-  "edge_side_panel": {
-    "preferred_width": 400
-  },
-  "launch_handler": {
-    "client_mode": "navigate-existing"
-  }
+  "prefer_related_applications": false,
+  "related_applications": [],
+  "dir": "ltr",
+  "display_override": ["window-controls-overlay", "standalone", "minimal-ui"]
 }
