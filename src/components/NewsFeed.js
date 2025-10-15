@@ -15,10 +15,10 @@ const CompareCoverage = lazy(() => import('./CompareCoverage'));
 // Register GSAP plugins
 gsap.registerPlugin(ScrollTrigger);
 
-// ENHANCED CONSTANTS - Using BOTH Render (news) AND Cloud Run (bias analysis)
+// 🔧 ENHANCED CONSTANTS - Updated with BOTH Render backend AND Cloud Run bias API
 const API_URL = process.env.REACT_APP_API_URL || 'https://thenarrative-backend.onrender.com';
-const BIAS_API_URL = 'https://narrative-ml-cloudrun-53060812465.asia-south2.run.app'; // NEW: Your working bias API
 const PYTHON_API_URL = process.env.REACT_APP_PYTHON_API_URL || 'https://thenarrative-python.onrender.com';
+const BIAS_API_URL = 'https://narrative-ml-cloudrun-53060812465.asia-south2.run.app'; // ✨ NEW: Your working bias API
 const API_TIMEOUT = parseInt(process.env.REACT_APP_API_TIMEOUT) || 15000;
 const ARTICLES_PER_PAGE = 20;
 const STORIES_PER_PAGE = 10;
@@ -28,7 +28,7 @@ const CACHE_DURATION = parseInt(process.env.REACT_APP_CACHE_DURATION) || 300000;
 const MAX_RETRIES = 3;
 const RETRY_DELAY = 1000;
 
-// ENHANCED PERFORMANCE MONITORING
+// 🎯 ENHANCED PERFORMANCE MONITORING - FIXED: Added dependency array to useLayoutEffect
 const usePerformanceMonitoring = (componentName) => {
   const mountTime = useRef(Date.now());
   const [performanceMetrics, setPerformanceMetrics] = useState({});
@@ -44,6 +44,7 @@ const usePerformanceMonitoring = (componentName) => {
       timestamp: Date.now()
     });
 
+    // Report to analytics if available
     if (window.gtag) {
       window.gtag('event', 'component_performance', {
         'component': componentName,
@@ -53,18 +54,36 @@ const usePerformanceMonitoring = (componentName) => {
       });
     }
 
+    // Send to backend analytics
+    if (process.env.REACT_APP_WEB_VITALS_ENDPOINT) {
+      fetch(process.env.REACT_APP_WEB_VITALS_ENDPOINT, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          type: 'component_performance',
+          component: componentName,
+          renderTime,
+          totalTime,
+          timestamp: Date.now()
+        })
+      }).catch(() => {}); // Silent fail
+    }
+
+    // Performance optimization warnings
     if (renderTime > 100) {
-      console.warn(`Slow render detected in ${componentName}: ${renderTime}ms`);
+      console.warn(`🐌 Slow render detected in ${componentName}: ${renderTime}ms`);
     }
     if (renderTime > 300) {
-      console.error(`Critical render time in ${componentName}: ${renderTime}ms`);
+      console.error(`🚨 Critical render time in ${componentName}: ${renderTime}ms`);
     }
-  }, [componentName]);
+  }, [componentName]); // FIXED: Added missing dependency
 
-  return performanceMetrics;
+  return performanceMetrics; // FIXED: Removed unused renderStartTime
 };
 
-// ENHANCED LOADING STATES
+// 🎨 ENHANCED LOADING STATES
 const LoadingState = ({ type = 'articles', message, count = 6 }) => (
   <div className="loading-state" role="status" aria-live="polite">
     <div className="loading-animation">
@@ -85,6 +104,7 @@ const LoadingState = ({ type = 'articles', message, count = 6 }) => (
         <div className="progress-fill"></div>
       </div>
     </div>
+    {/* Skeleton cards */}
     <div className="loading-skeleton">
       {[...Array(count)].map((_, index) => (
         <div key={index} className="skeleton-card">
@@ -107,7 +127,7 @@ const LoadingState = ({ type = 'articles', message, count = 6 }) => (
   </div>
 );
 
-// ENHANCED ERROR HANDLING
+// 🚨 ENHANCED ERROR HANDLING
 const ErrorState = ({ error, onRetry, type = 'articles', onReport }) => {
   const [isReporting, setIsReporting] = useState(false);
   const errorRef = useRef(null);
@@ -197,7 +217,7 @@ const ErrorState = ({ error, onRetry, type = 'articles', onReport }) => {
         <div className="error-details">
           <h2 className="error-title">{errorInfo.title}</h2>
           <p className="error-message">{errorInfo.message}</p>
-          <p className="error-suggestion">{errorInfo.suggestion}</p>
+          <p className="error-suggestion">💡 {errorInfo.suggestion}</p>
           
           {process.env.NODE_ENV === 'development' && (
             <details className="error-debug">
@@ -215,10 +235,10 @@ const ErrorState = ({ error, onRetry, type = 'articles', onReport }) => {
       
       <div className="error-actions">
         <button onClick={onRetry} className="error-btn retry-btn primary" aria-label="Retry loading">
-          Try Again
+          🔄 Try Again
         </button>
         <button onClick={() => window.location.reload()} className="error-btn refresh-btn secondary" aria-label="Refresh page">
-          Refresh Page
+          🔃 Refresh Page
         </button>
         {onReport && (
           <button 
@@ -230,6 +250,14 @@ const ErrorState = ({ error, onRetry, type = 'articles', onReport }) => {
             {isReporting ? '⏳' : '📧'} Report Issue
           </button>
         )}
+        <button 
+          onClick={() => navigator.clipboard.writeText(window.location.href)} 
+          className="error-btn share-btn tertiary" 
+          aria-label="Copy page URL"
+          title="Copy URL to share with support"
+        >
+          📋 Copy URL
+        </button>
       </div>
       
       <div className="error-suggestions">
@@ -239,14 +267,17 @@ const ErrorState = ({ error, onRetry, type = 'articles', onReport }) => {
           <li>Refresh the page</li>
           <li>Try again in a few minutes</li>
           <li>Clear your browser cache</li>
+          {errorInfo.type === 'timeout' && <li>Switch to a more stable internet connection</li>}
+          {errorInfo.type === 'rate_limit' && <li>Wait 30 seconds before trying again</li>}
         </ul>
       </div>
     </div>
   );
 };
 
-// ENHANCED BIAS INDICATOR
-const EnhancedBiasIndicator = ({ bias, confidence, score, compact = false }) => {
+// 📊 ENHANCED BIAS INDICATOR
+const EnhancedBiasIndicator = ({ bias, confidence, score, keyIndicators = [], compact = false, showDetails = false }) => {
+  const [expanded, setExpanded] = useState(false);
   const indicatorRef = useRef(null);
 
   const getBiasColor = (bias) => {
@@ -317,6 +348,7 @@ const EnhancedBiasIndicator = ({ bias, confidence, score, compact = false }) => 
             transform: `scale(${0.8 + (confidence * 0.4)})`,
             boxShadow: `0 0 ${confidence * 20}px ${getBiasColor(bias)}40`
           }}
+          onClick={() => showDetails && setExpanded(!expanded)}
         >
           {getBiasEmoji(bias)}
         </div>
@@ -349,11 +381,184 @@ const EnhancedBiasIndicator = ({ bias, confidence, score, compact = false }) => 
           </div>
         </div>
       </div>
+      {showDetails && expanded && keyIndicators.length > 0 && (
+        <div className="bias-indicators-detail">
+          <h5>Key Indicators</h5>
+          <ul>
+            {keyIndicators.slice(0, 5).map((indicator, index) => (
+              <li key={index}>{indicator}</li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 };
 
-// MAIN NEWSFEED COMPONENT
+// 📈 ENHANCED STATISTICS DASHBOARD
+const StatisticsDashboard = ({ statsData, viewMode, onViewModeChange }) => {
+  const [animatedStats, setAnimatedStats] = useState({});
+  const statsRef = useRef(null);
+
+  useEffect(() => {
+    if (!statsData || !statsRef.current) return;
+
+    // Animate statistics counters
+    Object.entries(statsData.overview || {}).forEach(([key, value]) => {
+      if (typeof value === 'number') {
+        gsap.fromTo({ value: 0 }, { value: value, duration: 2, ease: "power2.out", onUpdate: function() {
+          setAnimatedStats(prev => ({ ...prev, [key]: Math.round(this.targets[0].value) }));
+        }});
+      }
+    });
+
+    // Animate the dashboard
+    gsap.fromTo(statsRef.current.children,
+      { opacity: 0, x: -20 },
+      { opacity: 1, x: 0, duration: 0.5, stagger: 0.1, ease: "power1.out" }
+    );
+  }, [statsData]);
+
+  if (!statsData) return null;
+
+  return (
+    <div ref={statsRef} className="statistics-dashboard">
+      <div className="stats-header">
+        <h3>📊 News Overview</h3>
+        <div className="stats-timestamp">
+          Last updated: {moment(statsData.metadata?.timestamp).fromNow()}
+        </div>
+      </div>
+      
+      <div className="stats-grid">
+        <div className="stats-card total-articles">
+          <div className="stats-icon">📰</div>
+          <div className="stats-content">
+            <span className="stats-number">{animatedStats.totalArticles || statsData.overview?.totalArticles || 0}</span>
+            <span className="stats-label">Total Articles</span>
+          </div>
+        </div>
+        
+        <div className="stats-card recent-articles">
+          <div className="stats-icon">🆕</div>
+          <div className="stats-content">
+            <span className="stats-number">{animatedStats.recentArticles || statsData.overview?.recentArticles || 0}</span>
+            <span className="stats-label">Today</span>
+          </div>
+        </div>
+        
+        <div className="stats-card analysis-rate">
+          <div className="stats-icon">🧠</div>
+          <div className="stats-content">
+            <span className="stats-number">{statsData.biasStats?.analysisRate || 0}%</span>
+            <span className="stats-label">Analyzed</span>
+          </div>
+        </div>
+        
+        <div className="stats-card confidence">
+          <div className="stats-icon">✅</div>
+          <div className="stats-content">
+            <span className="stats-number">{Math.round(statsData.qualityMetrics?.averageConfidence * 100) || 0}%</span>
+            <span className="stats-label">Avg Confidence</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Bias Distribution Chart */}
+      {statsData.biasStats?.distribution && (
+        <div className="bias-distribution">
+          <h4>📊 Bias Distribution</h4>
+          <div className="distribution-chart">
+            {Object.entries(statsData.biasStats.distribution).map(([bias, data]) => (
+              <div key={bias} className={`bias-segment ${bias}`}>
+                <div className="segment-bar">
+                  <div 
+                    className="segment-fill" 
+                    style={{
+                      width: `${data.percentage || 0}%`,
+                      backgroundColor: bias === 'left' ? '#2563eb' : bias === 'right' ? '#dc2626' : bias === 'center' ? '#059669' : '#6b7280'
+                    }}
+                  />
+                </div>
+                <div className="segment-info">
+                  <span className="segment-label">{bias.charAt(0).toUpperCase() + bias.slice(1)}</span>
+                  <span className="segment-count">{data.count || 0}</span>
+                  <span className="segment-percentage">{data.percentage || 0}%</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* View Mode Toggle */}
+      <div className="view-mode-stats">
+        <h4>👁️ View Options</h4>
+        <div className="view-buttons">
+          <button 
+            className={`view-stat-btn ${viewMode === 'articles' ? 'active' : ''}`}
+            onClick={() => onViewModeChange('articles')}
+          >
+            📰 Articles ({statsData.overview?.totalArticles || 0})
+          </button>
+          <button 
+            className={`view-stat-btn ${viewMode === 'stories' ? 'active' : ''}`}
+            onClick={() => onViewModeChange('stories')}
+          >
+            📚 Stories ({statsData.overview?.totalStories || 0})
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// ♾️ ENHANCED INFINITE SCROLL LOADER
+const InfiniteScrollLoader = ({ isLoading, hasMore, error, onRetry }) => {
+  if (error) {
+    return (
+      <div className="infinite-scroll-error">
+        <p>⚠️ Failed to load more articles</p>
+        <button onClick={onRetry} className="retry-more-btn">Try Again</button>
+      </div>
+    );
+  }
+
+  if (!hasMore) {
+    return (
+      <div className="infinite-scroll-end">
+        <div className="end-icon">📚</div>
+        <p className="end-title">You've reached the end!</p>
+        <p className="end-subtitle">All articles have been loaded.</p>
+        <div className="end-stats">
+          <span>Great job staying informed! 🌟</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="infinite-scroll-loading">
+        <div className="loading-spinner-inline">
+          <div className="spinner-ring"></div>
+          <div className="spinner-ring"></div>
+          <div className="spinner-ring"></div>
+        </div>
+        <span className="loading-text">Loading more articles...</span>
+        <div className="loading-dots">
+          <span>•</span>
+          <span>•</span>
+          <span>•</span>
+        </div>
+      </div>
+    );
+  }
+
+  return null;
+};
+
+// 🌟 MAIN NEWSFEED COMPONENT
 const NewsFeed = ({
   activeFilters = {},
   viewMode = 'articles',
@@ -368,7 +573,7 @@ const NewsFeed = ({
   // Performance and State Management
   const performanceMetrics = usePerformanceMonitoring('NewsFeed');
   
-  // Enhanced State Management
+  // 🔄 Enhanced State Management
   const [localSelectedArticle, setLocalSelectedArticle] = useState(selectedArticle);
   const [showComparison, setShowComparison] = useState(false);
   const [viewStats, setViewStats] = useState({});
@@ -378,19 +583,20 @@ const NewsFeed = ({
   const [animationEnabled, setAnimationEnabled] = useState(true);
   const [offlineMode, setOfflineMode] = useState(!isOnline);
 
-  // Animation and UI Refs
+  // 📱 Animation and UI Refs
   const containerRef = useRef(null);
   const observerRef = useRef(null);
   const queryClient = useQueryClient();
   const articlesGridRef = useRef(null);
+  const statsRef = useRef(null);
 
-  // Responsive and Accessibility
+  // 📱 Responsive and Accessibility
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(
     window.matchMedia('(prefers-reduced-motion: reduce)').matches
   );
 
-  // ENHANCED API SERVICE - Using BOTH backends
+  // 🔗 ENHANCED API SERVICE with comprehensive error handling and caching
   const newsAPI = useMemo(() => ({
     fetchArticles: async (pageParam = 1) => {
       const cacheKey = `articles-${JSON.stringify(activeFilters)}-${searchQuery}-${sortBy}-${sortOrder}-${pageParam}`;
@@ -407,7 +613,7 @@ const NewsFeed = ({
       const params = new URLSearchParams({
         page: pageParam.toString(),
         limit: ARTICLES_PER_PAGE.toString(),
-        enhanced: 'true',
+        enhanced: 'true', // Request comprehensive bias analysis
         includeStats: 'true',
         includeMetrics: 'true',
         cacheControl: 'no-cache',
@@ -418,21 +624,24 @@ const NewsFeed = ({
         )
       });
 
+      // Add search query if present
       if (searchQuery && searchQuery.trim()) {
         params.append('search', searchQuery.trim());
       }
 
+      // Add sorting parameters
       if (sortBy) params.append('sortBy', sortBy);
       if (sortOrder) params.append('sortOrder', sortOrder);
+
+      // Add offline mode parameter
       if (offlineMode) params.append('offline', 'true');
 
       const requestId = `newsfeed-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const startTime = Date.now();
 
       try {
-        console.log(`Fetching from ${API_URL}/api/news?${params}`);
+        console.log(`🔍 Fetching from ${API_URL}/api/news?${params}`);
         
-        // Use Render backend for fetching news articles
         const response = await axios.get(`${API_URL}/api/news?${params}`, {
           timeout: API_TIMEOUT,
           headers: {
@@ -446,58 +655,17 @@ const NewsFeed = ({
         });
 
         const responseTime = Date.now() - startTime;
-        console.log(`Fetched ${response.data.articles?.length || 0} articles in ${responseTime}ms`);
+        console.log(`✅ Fetched ${response.data.articles?.length || 0} articles in ${responseTime}ms`);
 
         // Validate response structure
         if (!response.data || !Array.isArray(response.data.articles)) {
-          console.error('Invalid API response structure', response.data);
+          console.error('❌ Invalid API response structure', response.data);
           throw new Error('Invalid API response structure - expected articles array');
         }
 
-        // Enhance articles with bias analysis from Cloud Run API
-        const articlesWithBias = await Promise.all(
-          response.data.articles.map(async (article) => {
-            try {
-              // Use your Cloud Run API for bias analysis
-              const biasResponse = await axios.post(`${BIAS_API_URL}/analyze`, {
-                text: article.content || article.description || article.title || 'No content available'
-              }, {
-                timeout: 5000, // Shorter timeout for bias analysis
-                headers: {
-                  'Accept': 'application/json',
-                  'Content-Type': 'application/json'
-                }
-              });
-
-              return {
-                ...article,
-                articleBias: biasResponse.data.bias_type || 'center',
-                biasConfidence: biasResponse.data.confidence || 0.85,
-                biasScore: biasResponse.data.bias_score ? Math.round(biasResponse.data.bias_score * 100) : 50,
-                biasReasoning: biasResponse.data.explanation || 'AI-powered bias analysis'
-              };
-            } catch (biasError) {
-              console.warn(`Bias analysis failed for article ${article.id}:`, biasError.message);
-              // Fallback bias analysis
-              return {
-                ...article,
-                articleBias: 'center',
-                biasConfidence: 0.5,
-                biasScore: 50,
-                biasReasoning: 'Bias analysis unavailable'
-              };
-            }
-          })
-        );
-
-        const enhancedResponse = {
-          ...response.data,
-          articles: articlesWithBias
-        };
-
         // Cache the response
         const dataWithTimestamp = {
-          data: enhancedResponse,
+          data: response.data,
           timestamp: Date.now(),
           requestId,
           responseTime
@@ -509,15 +677,16 @@ const NewsFeed = ({
           window.gtag('event', 'news_fetch_success', {
             event_category: 'API',
             page: pageParam,
-            articles_count: enhancedResponse.articles.length,
+            articles_count: response.data.articles.length,
             filters_active: Object.keys(activeFilters).filter(k => activeFilters[k] !== 'all').length,
             response_time: responseTime,
             cache_status: 'miss'
           });
         }
 
+        // Enhanced response data
         return {
-          ...enhancedResponse,
+          ...response.data,
           performance: {
             requestId,
             responseTime,
@@ -528,8 +697,9 @@ const NewsFeed = ({
 
       } catch (error) {
         const responseTime = Date.now() - startTime;
-        console.error(`News fetch error (${responseTime}ms):`, error);
+        console.error(`❌ News fetch error (${responseTime}ms):`, error);
 
+        // Enhanced error handling with specific error types
         if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
           throw new Error('Request timeout - please check your connection and try again');
         } else if (error.response?.status === 429) {
@@ -568,7 +738,7 @@ const NewsFeed = ({
       const startTime = Date.now();
 
       try {
-        console.log(`Fetching stories from ${API_URL}/api/news/stories?${params}`);
+        console.log(`📚 Fetching stories from ${API_URL}/api/news/stories?${params}`);
         const response = await axios.get(`${API_URL}/api/news/stories?${params}`, {
           timeout: API_TIMEOUT,
           headers: {
@@ -579,11 +749,11 @@ const NewsFeed = ({
         });
 
         const responseTime = Date.now() - startTime;
-        console.log(`Fetched ${response.data.storyGroups?.length || 0} story groups in ${responseTime}ms`);
+        console.log(`✅ Fetched ${response.data.storyGroups?.length || 0} story groups in ${responseTime}ms`);
 
         return response.data;
       } catch (error) {
-        console.error('Stories fetch error:', error);
+        console.error('❌ Stories fetch error:', error);
         throw error;
       }
     },
@@ -600,15 +770,16 @@ const NewsFeed = ({
 
         return response.data;
       } catch (error) {
-        console.error('Stats fetch error:', error);
+        console.error('❌ Stats fetch error:', error);
         throw error;
       }
     },
 
-    // Enhanced bias analysis using your Cloud Run API
+    // ✨ Enhanced bias analysis with comprehensive fallback - NOW USES CLOUD RUN API!
     fetchBiasAnalysis: async (articleId, articleContent, articleSource) => {
       try {
-        // Use your NEW working Cloud Run API for bias analysis
+        // 🚀 First try your NEW working Cloud Run API
+        console.log(`🧠 Analyzing bias for article ${articleId} using Cloud Run API...`);
         const response = await axios.post(`${BIAS_API_URL}/analyze`, {
           text: articleContent
         }, {
@@ -619,9 +790,8 @@ const NewsFeed = ({
           }
         });
 
-        console.log(`Bias analysis successful for article ${articleId}`);
+        console.log(`✅ Bias analysis successful for article ${articleId}`);
         
-        // Transform the response to match your frontend format
         return {
           bias: response.data.bias_type || 'center',
           confidence: response.data.confidence || 0.85,
@@ -629,8 +799,46 @@ const NewsFeed = ({
           explanation: response.data.explanation || 'AI-powered bias analysis'
         };
       } catch (error) {
-        console.error(`Bias analysis failed for article ${articleId}:`, error.message);
-        throw new Error('Bias analysis temporarily unavailable');
+        console.warn(`⚠️ Cloud Run bias analysis failed for article ${articleId}, trying fallback:`, error.message);
+        
+        // Fallback to your original Python API if available
+        try {
+          const fallbackResponse = await axios.post(`${PYTHON_API_URL}/analyze`, {
+            text: articleContent,
+            articleId,
+            source: articleSource
+          }, {
+            timeout: API_TIMEOUT,
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json'
+            }
+          });
+          
+          console.log(`✅ Fallback bias analysis successful for article ${articleId}`);
+          return fallbackResponse.data;
+        } catch (fallbackError) {
+          console.error(`❌ Both bias analysis methods failed for article ${articleId}`);
+          
+          // Final fallback - simple keyword analysis
+          const text = articleContent.toLowerCase();
+          const leftKeywords = ['progressive', 'liberal', 'democrat', 'social justice', 'climate change'];
+          const rightKeywords = ['conservative', 'republican', 'traditional', 'law and order', 'free market'];
+          
+          const leftCount = leftKeywords.reduce((count, word) => count + (text.includes(word) ? 1 : 0), 0);
+          const rightCount = rightKeywords.reduce((count, word) => count + (text.includes(word) ? 1 : 0), 0);
+          
+          let bias = 'center';
+          if (leftCount > rightCount) bias = 'left';
+          else if (rightCount > leftCount) bias = 'right';
+          
+          return {
+            bias,
+            confidence: 0.3,
+            score: bias === 'left' ? 25 : bias === 'right' ? 75 : 50,
+            explanation: 'Fallback keyword-based analysis'
+          };
+        }
       }
     },
 
@@ -654,7 +862,7 @@ const NewsFeed = ({
     }
   }), [activeFilters, searchQuery, sortBy, sortOrder, offlineMode, animationEnabled, isMobile, queryClient]);
 
-  // ENHANCED INFINITE QUERY FOR ARTICLES
+  // 🔄 ENHANCED INFINITE QUERY FOR ARTICLES
   const {
     data: articlesData,
     fetchNextPage,
@@ -678,10 +886,12 @@ const NewsFeed = ({
       refetchOnWindowFocus: false,
       refetchOnReconnect: true,
       retry: (failureCount, error) => {
+        // Don't retry on client errors (4xx) except 429
         if (error.response?.status >= 400 && error.response?.status < 500 && error.response?.status !== 429) {
           return false;
         }
         
+        // Retry with exponential backoff
         if (failureCount < MAX_RETRIES) {
           setTimeout(() => {}, RETRY_DELAY * Math.pow(2, failureCount));
           return true;
@@ -692,6 +902,7 @@ const NewsFeed = ({
       onError: (error) => {
         console.error('Articles query error:', error);
         
+        // Track error analytics
         if (window.gtag) {
           window.gtag('event', 'news_fetch_error', {
             event_category: 'API Error',
@@ -701,12 +912,43 @@ const NewsFeed = ({
         }
       },
       onSuccess: (data) => {
-        console.log(`Articles query successful: ${data.pages.length} pages loaded`);
+        console.log(`✅ Articles query successful: ${data.pages.length} pages loaded`);
       }
     }
   );
 
-  // RESPONSIVE AND ACCESSIBILITY HANDLERS
+  // 📚 ENHANCED STORY GROUPS QUERY
+  const {
+    data: storiesData,
+    isLoading: isStoriesLoading,
+    error: storiesError,
+    refetch: refetchStories
+  } = useQuery(
+    ['stories', activeFilters],
+    () => newsAPI.fetchStories(),
+    {
+      cacheTime: CACHE_TIME,
+      staleTime: STALE_TIME,
+      enabled: viewMode === 'stories',
+      retry: 2,
+      onError: (error) => console.error('Stories query error:', error)
+    }
+  );
+
+  // 📊 ENHANCED STATISTICS QUERY - FIXED: Removed unused variables
+  const { data: statsData } = useQuery(
+    'news-stats',
+    newsAPI.fetchStats,
+    {
+      cacheTime: CACHE_TIME,
+      staleTime: STALE_TIME * 0.4, // Refresh stats more frequently
+      refetchInterval: 5 * 60 * 1000, // Refetch every 5 minutes
+      retry: 1,
+      onError: (error) => console.error('Stats query error:', error)
+    }
+  );
+
+  // 📱 RESPONSIVE AND ACCESSIBILITY HANDLERS
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);
     const handleReducedMotion = (e) => {
@@ -725,24 +967,141 @@ const NewsFeed = ({
     };
   }, []);
 
-  // ONLINE/OFFLINE DETECTION
+  // 🌐 ONLINE/OFFLINE DETECTION
   useEffect(() => {
     setOfflineMode(!isOnline);
     
     if (isOnline && offlineMode) {
+      // Coming back online - refresh data
       queryClient.invalidateQueries(['articles']);
       queryClient.invalidateQueries(['stories']);
       queryClient.invalidateQueries(['news-stats']);
     }
   }, [isOnline, offlineMode, queryClient]);
 
-  // COMBINE ARTICLES FROM ALL PAGES
+  // 🔗 COMBINE ARTICLES FROM ALL PAGES
   const allArticles = useMemo(() => {
     if (!articlesData?.pages) return [];
     return articlesData.pages.flatMap(page => page.articles || []);
   }, [articlesData]);
 
-  // ENHANCED EVENT HANDLERS
+  // 👁️ ENHANCED INTERSECTION OBSERVER FOR LAZY LOADING AND ANALYTICS
+  useEffect(() => {
+    if (!containerRef.current || !animationEnabled) return;
+
+    const observerOptions = {
+      threshold: isMobile ? 0.3 : 0.5,
+      rootMargin: isMobile ? '30px 0px' : '50px 0px'
+    };
+
+    observerRef.current = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          // Trigger animations
+          entry.target.classList.add('visible');
+
+          // Track article view
+          const articleId = entry.target.dataset.articleId;
+          if (articleId && !viewStats[articleId]) {
+            const viewTime = Date.now();
+            setViewStats(prev => ({ ...prev, [articleId]: viewTime }));
+
+            // Analytics tracking with enhanced data
+            if (window.gtag) {
+              window.gtag('event', 'article_view', {
+                event_category: 'Content',
+                article_id: articleId,
+                view_mode: viewMode,
+                time_on_page: Date.now() - lastInteraction,
+                scroll_depth: Math.round((window.scrollY / document.body.scrollHeight) * 100)
+              });
+            }
+          }
+        }
+      });
+    }, observerOptions);
+
+    // Observe all article cards
+    const articleCards = containerRef.current.querySelectorAll('.news-card, .story-group-card');
+    articleCards.forEach(card => {
+      if (observerRef.current) {
+        observerRef.current.observe(card);
+      }
+    });
+
+    return () => {
+      if (observerRef.current) {
+        observerRef.current.disconnect();
+      }
+    };
+  }, [allArticles, viewMode, viewStats, lastInteraction, animationEnabled, isMobile]);
+
+  // ✨ ENHANCED GSAP ANIMATIONS
+  useLayoutEffect(() => {
+    if (!containerRef.current || allArticles.length === 0 || !animationEnabled) return;
+
+    const ctx = gsap.context(() => {
+      // Animate article cards on load
+      gsap.fromTo('.news-card:not(.visible)', 
+        { opacity: 0, y: isMobile ? 20 : 30, scale: 0.98 },
+        { 
+          opacity: 1, 
+          y: 0, 
+          scale: 1, 
+          duration: prefersReducedMotion ? 0.2 : 0.6,
+          stagger: prefersReducedMotion ? 0 : 0.1,
+          ease: "power2.out"
+        }
+      );
+
+      // Animate bias indicators
+      gsap.fromTo('.bias-indicator:not(.animated)',
+        { scale: 0, rotation: -180 },
+        { 
+          scale: 1, 
+          rotation: 0, 
+          duration: prefersReducedMotion ? 0.1 : 0.8,
+          delay: prefersReducedMotion ? 0 : 0.3,
+          stagger: prefersReducedMotion ? 0 : 0.05,
+          ease: "back.out(1.7)",
+          onComplete: function() {
+            this.targets.forEach(target => target.classList.add('animated'));
+          }
+        }
+      );
+
+      // Animate statistics dashboard
+      if (statsData && statsRef.current) {
+        gsap.fromTo('.stats-card',
+          { opacity: 0, x: -20 },
+          { 
+            opacity: 1, 
+            x: 0, 
+            duration: prefersReducedMotion ? 0.1 : 0.5,
+            stagger: prefersReducedMotion ? 0 : 0.1,
+            ease: "power1.out"
+          }
+        );
+      }
+
+      // Animate articles grid
+      if (articlesGridRef.current) {
+        gsap.fromTo(articlesGridRef.current,
+          { opacity: 0, y: 20 },
+          { 
+            opacity: 1, 
+            y: 0, 
+            duration: prefersReducedMotion ? 0.1 : 0.4,
+            ease: "power1.out"
+          }
+        );
+      }
+    }, containerRef);
+
+    return () => ctx.revert();
+  }, [allArticles, statsData, animationEnabled, prefersReducedMotion, isMobile]);
+
+  // 🎯 ENHANCED EVENT HANDLERS
   const handleArticleClick = useCallback((article) => {
     setLocalSelectedArticle(article);
     setLastInteraction(Date.now());
@@ -751,6 +1110,7 @@ const NewsFeed = ({
       onArticleSelect(article);
     }
 
+    // Enhanced analytics tracking
     if (window.gtag) {
       window.gtag('event', 'article_click', {
         event_category: 'Content Interaction',
@@ -764,6 +1124,34 @@ const NewsFeed = ({
     }
   }, [onArticleSelect, lastInteraction]);
 
+  const handleComparisonToggle = useCallback((article) => {
+    const newShowComparison = selectedArticle?.id !== article.id || !showComparison;
+    
+    if (selectedArticle?.id === article.id) {
+      setShowComparison(newShowComparison);
+    } else {
+      setLocalSelectedArticle(article);
+      setShowComparison(true);
+      
+      if (onArticleSelect) {
+        onArticleSelect(article);
+      }
+    }
+    
+    setLastInteraction(Date.now());
+
+    // Enhanced comparison analytics
+    if (window.gtag) {
+      window.gtag('event', 'comparison_toggle', {
+        event_category: 'Feature Usage',
+        article_id: article.id,
+        show_comparison: newShowComparison,
+        comparison_count: viewStats ? Object.keys(viewStats).length : 0
+      });
+    }
+  }, [selectedArticle, showComparison, onArticleSelect, viewStats]);
+
+  // 🔄 ENHANCED ERROR RETRY WITH EXPONENTIAL BACKOFF
   const handleRetry = useCallback(async () => {
     const retryKey = `${viewMode}-${Date.now()}`;
     const currentAttempts = retryAttempts[retryKey] || 0;
@@ -774,47 +1162,53 @@ const NewsFeed = ({
     }
 
     setRetryAttempts(prev => ({ ...prev, [retryKey]: currentAttempts + 1 }));
-    console.log(`Retrying failed request (attempt ${currentAttempts + 1}/${MAX_RETRIES})...`);
+    console.log(`🔄 Retrying failed request (attempt ${currentAttempts + 1}/${MAX_RETRIES})...`);
 
+    // Exponential backoff delay
     const delay = RETRY_DELAY * Math.pow(2, currentAttempts);
     await new Promise(resolve => setTimeout(resolve, delay));
 
     try {
-      await refetchArticles();
+      if (viewMode === 'articles') {
+        await refetchArticles();
+      } else {
+        await refetchStories();
+      }
       
+      // Clear retry attempts on success
       setRetryAttempts(prev => {
         const newAttempts = { ...prev };
         delete newAttempts[retryKey];
         return newAttempts;
       });
       
-      console.log('Retry successful');
+      console.log('✅ Retry successful');
     } catch (retryError) {
-      console.error('Retry failed:', retryError);
+      console.error('❌ Retry failed:', retryError);
     }
-  }, [viewMode, refetchArticles, retryAttempts]);
+  }, [viewMode, refetchArticles, refetchStories, retryAttempts]);
 
   const handleErrorReport = useCallback(async (error) => {
     try {
       await newsAPI.reportError(error);
-      console.log('Error reported successfully');
+      console.log('✅ Error reported successfully');
     } catch (reportError) {
-      console.error('Failed to report error:', reportError);
+      console.error('❌ Failed to report error:', reportError);
     }
   }, [newsAPI]);
 
-  // COMPUTED VALUES AND LOADING STATES
-  const isLoading = isArticlesLoading && !isRefetching;
-  const error = articlesError;
-  const hasData = allArticles.length > 0;
+  // 💾 COMPUTED VALUES AND LOADING STATES
+  const isLoading = viewMode === 'articles' ? (isArticlesLoading && !isRefetching) : isStoriesLoading;
+  const error = viewMode === 'articles' ? articlesError : storiesError;
+  const hasData = viewMode === 'articles' ? allArticles.length > 0 : storiesData?.storyGroups?.length > 0;
   const isInitialLoading = isLoading && !hasData;
 
-  // DEBUG INFORMATION (Development Mode)
+  // 🔧 DEBUG INFORMATION (Development Mode)
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
-      console.log('NewsFeed Debug Info:', {
+      console.log('🔧 NewsFeed Debug Info:', {
         API_URL,
-        BIAS_API_URL,
+        BIAS_API_URL, // NEW: Added bias API URL to debug info
         viewMode,
         isLoading,
         error: error?.message,
@@ -832,20 +1226,20 @@ const NewsFeed = ({
     }
   }, [isLoading, error, hasData, allArticles.length, activeFilters, searchQuery, sortBy, sortOrder, isOnline, offlineMode, cacheStats, performanceMetrics, viewMode]);
 
-  // RENDER: INITIAL LOADING STATE
+  // 🎬 RENDER: INITIAL LOADING STATE
   if (isInitialLoading) {
     return (
       <div className="newsfeed-container" ref={containerRef}>
         <LoadingState 
           type={viewMode} 
-          message={searchQuery ? `Searching for "${searchQuery}"...` : undefined}
+          message={searchQuery ? `🔍 Searching for "${searchQuery}"...` : undefined}
           count={isMobile ? 3 : 6}
         />
       </div>
     );
   }
 
-  // RENDER: ERROR STATE
+  // ❌ RENDER: ERROR STATE
   if (error && !hasData) {
     return (
       <div className="newsfeed-container" ref={containerRef}>
@@ -859,113 +1253,324 @@ const NewsFeed = ({
     );
   }
 
-  // RENDER: ARTICLES VIEW
-  return (
-    <div className="newsfeed-container articles-view" ref={containerRef}>
-      {/* Search Results Info */}
-      {searchQuery && (
-        <div className="search-results-info">
-          <h3>🔍 Search Results for "{searchQuery}"</h3>
-          <p>Found {allArticles.length} article{allArticles.length !== 1 ? 's' : ''}</p>
-          {allArticles.length === 0 && (
-            <div className="no-results">
-              <p>No articles found matching your search.</p>
-              <div className="search-suggestions">
-                <h4>Try:</h4>
-                <ul>
-                  <li>Different keywords</li>
-                  <li>Removing some filters</li>
-                  <li>Checking spelling</li>
-                  <li>Using broader terms</li>
-                </ul>
-              </div>
-            </div>
-          )}
+  // 📰 RENDER: ARTICLES VIEW
+  if (viewMode === 'articles') {
+    return (
+      <div className="newsfeed-container articles-view" ref={containerRef}>
+        {/* Enhanced Statistics Dashboard */}
+        <div ref={statsRef}>
+          <StatisticsDashboard 
+            statsData={statsData} 
+            viewMode={viewMode} 
+            onViewModeChange={onViewModeChange}
+          />
         </div>
-      )}
 
-      {/* Enhanced Infinite Scroll Articles List */}
-      <div ref={articlesGridRef}>
-        <InfiniteScroll
-          dataLength={allArticles.length}
-          next={fetchNextPage}
-          hasMore={hasNextPage}
-          loader={
-            <div className="infinite-scroll-loading">
-              <div className="loading-spinner-inline">
-                <div className="spinner-ring"></div>
-                <div className="spinner-ring"></div>
-                <div className="spinner-ring"></div>
-              </div>
-              <span className="loading-text">Loading more articles...</span>
-            </div>
-          }
-          endMessage={
-            <div className="infinite-scroll-end">
-              <div className="end-icon">📚</div>
-              <p className="end-title">You've reached the end!</p>
-              <p className="end-subtitle">All articles have been loaded.</p>
-              <div className="end-stats">
-                <span>Great job staying informed! 🌟</span>
-              </div>
-            </div>
-          }
-          scrollThreshold={isMobile ? 0.8 : 0.9}
-          style={{ overflow: 'visible' }}
-        >
-          <div className={`articles-grid ${isMobile ? 'mobile' : 'desktop'}`}>
-            {allArticles.map((article, index) => (
-              <Suspense 
-                key={`${article.id}-${index}`} 
-                fallback={
-                  <div className="article-loading">
-                    <Skeleton height={isMobile ? 250 : 300} />
-                  </div>
-                }
-              >
-                <div 
-                  className="news-card" 
-                  data-article-id={article.id}
-                  onClick={() => handleArticleClick(article)}
-                  tabIndex={0}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault();
-                      handleArticleClick(article);
-                    }
-                  }}
-                >
-                  <NewsSummaryCard
-                    article={article}
-                    onCompare={() => {}}
-                    showComparison={false}
-                    viewStats={viewStats[article.id]}
-                    enhanced={true}
-                    isBookmarked={false}
-                    className={`article-${index}`}
-                  />
+        {/* Search Results Info */}
+        {searchQuery && (
+          <div className="search-results-info">
+            <h3>🔍 Search Results for "{searchQuery}"</h3>
+            <p>Found {allArticles.length} article{allArticles.length !== 1 ? 's' : ''}</p>
+            {allArticles.length === 0 && (
+              <div className="no-results">
+                <p>No articles found matching your search.</p>
+                <div className="search-suggestions">
+                  <h4>Try:</h4>
+                  <ul>
+                    <li>Different keywords</li>
+                    <li>Removing some filters</li>
+                    <li>Checking spelling</li>
+                    <li>Using broader terms</li>
+                  </ul>
                 </div>
-              </Suspense>
-            ))}
+              </div>
+            )}
           </div>
-        </InfiniteScroll>
+        )}
+
+        {/* Filters Summary */}
+        {Object.values(activeFilters).some(v => v !== 'all' && v !== false && v !== '') && (
+          <div className="active-filters-summary">
+            <h4>📌 Active Filters</h4>
+            <div className="filter-tags">
+              {Object.entries(activeFilters)
+                .filter(([key, value]) => value !== 'all' && value !== false && value !== '')
+                .map(([key, value]) => (
+                  <span key={key} className="filter-tag">
+                    {key}: {String(value)}
+                  </span>
+                ))}
+            </div>
+          </div>
+        )}
+
+        {/* Enhanced Infinite Scroll Articles List */}
+        <div ref={articlesGridRef}>
+          <InfiniteScroll
+            dataLength={allArticles.length}
+            next={fetchNextPage}
+            hasMore={hasNextPage}
+            loader={
+              <InfiniteScrollLoader 
+                isLoading={isFetchingNextPage} 
+                hasMore={hasNextPage} 
+                error={null}
+                onRetry={fetchNextPage}
+              />
+            }
+            endMessage={
+              <InfiniteScrollLoader 
+                isLoading={false} 
+                hasMore={false} 
+                error={null}
+              />
+            }
+            scrollThreshold={isMobile ? 0.8 : 0.9}
+            style={{ overflow: 'visible' }}
+          >
+            <div className={`articles-grid ${isMobile ? 'mobile' : 'desktop'}`}>
+              {allArticles.map((article, index) => (
+                <Suspense 
+                  key={`${article.id}-${index}`} 
+                  fallback={
+                    <div className="article-loading">
+                      <Skeleton height={isMobile ? 250 : 300} />
+                    </div>
+                  }
+                >
+                  <div 
+                    className="news-card" 
+                    data-article-id={article.id}
+                    onClick={() => handleArticleClick(article)}
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        handleArticleClick(article);
+                      }
+                    }}
+                  >
+                    <NewsSummaryCard
+                      article={article}
+                      onCompare={() => handleComparisonToggle(article)}
+                      showComparison={selectedArticle?.id === article.id && showComparison}
+                      viewStats={viewStats[article.id]}
+                      enhanced={true}
+                      isBookmarked={false} // Implement bookmarking if needed
+                      className={`article-${index}`}
+                    />
+                  </div>
+                </Suspense>
+              ))}
+            </div>
+          </InfiniteScroll>
+        </div>
+
+        {/* Enhanced Comparison Panel */}
+        {showComparison && (selectedArticle || localSelectedArticle) && (
+          <Suspense fallback={
+            <div className="comparison-loading">
+              <LoadingState message="Loading comparison..." count={3} />
+            </div>
+          }>
+            <CompareCoverage
+              article={selectedArticle || localSelectedArticle}
+              onClose={() => {
+                setShowComparison(false);
+                setLocalSelectedArticle(null);
+                if (onArticleSelect) onArticleSelect(null);
+              }}
+              apiService={newsAPI}
+              enhanced={true}
+            />
+          </Suspense>
+        )}
+
+        {/* Performance Info (Development) */}
+        {process.env.NODE_ENV === 'development' && (
+          <div className="dev-performance-info">
+            <details>
+              <summary>🔧 Performance Info</summary>
+              <pre>{JSON.stringify({
+                renderTime: performanceMetrics.renderTime,
+                articlesLoaded: allArticles.length,
+                cacheStats,
+                retryAttempts: Object.keys(retryAttempts).length,
+                animationsEnabled: animationEnabled,
+                offlineMode,
+                isMobile
+              }, null, 2)}</pre>
+            </details>
+          </div>
+        )}
+
+        {/* Stories Pagination (if needed) */}
+        {storiesData?.pagination?.hasMore && (
+          <div className="stories-pagination">
+            <button 
+              onClick={() => {
+                // Implement pagination for stories if needed
+                console.log('Load more stories');
+              }}
+              className="load-more-stories-btn"
+            >
+              📚 Load More Story Groups
+            </button>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // 📚 RENDER: STORIES VIEW
+  return (
+    <div className="newsfeed-container stories-view" ref={containerRef}>
+      <div className="stories-header">
+        <h2>📚 Story Groups</h2>
+        <p>Articles grouped by topic and analyzed for bias coverage</p>
+        {storiesData?.pagination && (
+          <div className="stories-stats">
+            <span>{storiesData.pagination.totalStories} story groups available</span>
+          </div>
+        )}
       </div>
 
-      {/* Performance Info (Development) */}
-      {process.env.NODE_ENV === 'development' && (
-        <div className="dev-performance-info">
-          <details>
-            <summary>🔧 Performance Info</summary>
-            <pre>{JSON.stringify({
-              renderTime: performanceMetrics.renderTime,
-              articlesLoaded: allArticles.length,
-              cacheStats,
-              retryAttempts: Object.keys(retryAttempts).length,
-              animationsEnabled: animationEnabled,
-              offlineMode,
-              isMobile
-            }, null, 2)}</pre>
-          </details>
+      {storiesData?.storyGroups?.length > 0 ? (
+        <div className={`stories-grid ${isMobile ? 'mobile' : 'desktop'}`}>
+          {storiesData.storyGroups.map((story, index) => (
+            <div key={`${story.id}-${index}`} className="story-group-card" data-story-id={story.id}>
+              <div className="story-header">
+                <h3>{story.title}</h3>
+                <div className="story-meta">
+                  <span className="article-count">📰 {story.totalArticles} articles</span>
+                  <span className="last-updated">
+                    🕒 Updated {moment(story.lastUpdated || story.createdAt).fromNow()}
+                  </span>
+                  {story.diversityScore && (
+                    <span className="diversity-score">
+                      🌈 Diversity: {Math.round(story.diversityScore * 100)}%
+                    </span>
+                  )}
+                </div>
+              </div>
+
+              {/* Story Quality Indicators */}
+              {story.qualityIndicators && (
+                <div className="story-quality">
+                  <div className="quality-indicators">
+                    {story.qualityIndicators.hasDiversePerspectives && (
+                      <span className="quality-badge diverse">✅ Diverse Perspectives</span>
+                    )}
+                    {story.qualityIndicators.hasReliableSources && (
+                      <span className="quality-badge reliable">🏆 Reliable Sources</span>
+                    )}
+                    {story.qualityIndicators.isRecent && (
+                      <span className="quality-badge recent">🆕 Recent Updates</span>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Story Bias Analysis */}
+              <div className="story-bias-analysis">
+                <h4>📊 Bias Distribution</h4>
+                <div className="bias-distribution">
+                  {story.biasAnalytics?.biasDistribution ? 
+                    Object.entries(story.biasAnalytics.biasDistribution).map(([bias, count]) => (
+                      <div key={bias} className={`bias-segment ${bias}`}>
+                        <EnhancedBiasIndicator 
+                          bias={bias} 
+                          confidence={0.8} // Story group confidence
+                          compact={true} 
+                        />
+                        <span className="bias-count">{count}</span>
+                      </div>
+                    )) : 
+                    <div className="no-bias-data">No bias data available</div>
+                  }
+                </div>
+              </div>
+
+              {/* Story Actions */}
+              <div className="story-actions">
+                <button 
+                  onClick={() => {
+                    handleArticleClick(story);
+                    if (onViewModeChange) onViewModeChange('comparison');
+                  }}
+                  className="view-story-btn primary"
+                >
+                  👁️ View Full Coverage
+                </button>
+                <button 
+                  onClick={() => {
+                    if (window.gtag) {
+                      window.gtag('event', 'story_share', {
+                        story_id: story.id,
+                        article_count: story.totalArticles
+                      });
+                    }
+                    if (navigator.share) {
+                      navigator.share({
+                        title: story.title,
+                        text: `Check out this story with ${story.totalArticles} different perspectives`,
+                        url: window.location.href
+                      });
+                    }
+                  }}
+                  className="share-story-btn secondary"
+                >
+                  📤 Share
+                </button>
+              </div>
+
+              {/* Story Articles */}
+              <div className="story-articles">
+                <h5>📄 Sample Articles</h5>
+                {story.articles?.slice(0, 3).map(article => (
+                  <div key={article.id} className="story-article-preview">
+                    <div className="article-preview-header">
+                      <span className="source-name">{article.source?.name}</span>
+                      <EnhancedBiasIndicator 
+                        bias={article.articleBias} 
+                        confidence={article.biasConfidence} 
+                        compact={true} 
+                      />
+                    </div>
+                    <span className="article-title">{article.title}</span>
+                    <span className="article-time">{moment(article.publishedAt).fromNow()}</span>
+                  </div>
+                )) || <div>No articles available</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="no-stories">
+          <div className="no-stories-content">
+            <div className="no-stories-icon">📚</div>
+            <h3>No Story Groups Available</h3>
+            <p>Story groups will appear as articles are analyzed and grouped by topic.</p>
+            
+            <div className="no-stories-suggestions">
+              <h4>This happens when:</h4>
+              <ul>
+                <li>Articles are still being processed</li>
+                <li>No articles match your current filters</li>
+                <li>The system is building story groups</li>
+              </ul>
+            </div>
+            
+            <button 
+              onClick={() => {
+                refetchStories();
+                if (onViewModeChange) onViewModeChange('articles');
+              }}
+              className="view-articles-btn"
+            >
+              📰 View Individual Articles Instead
+            </button>
+          </div>
         </div>
       )}
     </div>
@@ -973,5 +1578,15 @@ const NewsFeed = ({
 };
 
 NewsFeed.displayName = 'NewsFeed';
+
+// Default props
+NewsFeed.defaultProps = {
+  activeFilters: {},
+  viewMode: 'articles',
+  sortBy: 'publishedAt',
+  sortOrder: 'desc',
+  searchQuery: '',
+  isOnline: true
+};
 
 export default NewsFeed;
