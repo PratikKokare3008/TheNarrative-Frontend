@@ -1,417 +1,381 @@
-import React, { useState, useCallback, useMemo } from 'react'; // FIXED: Removed unused useEffect import
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useQuery } from 'react-query';
 import axios from 'axios';
+import { gsap } from 'gsap';
 import moment from 'moment';
 
-const API_URL = process.env.REACT_APP_API_URL || 'https://thenarrative-backend.onrender.com';
+const SportsSchedule = ({ sport = 'all', compact = false }) => {
+  const [selectedSport, setSelectedSport] = useState(sport);
+  const [viewMode, setViewMode] = useState('today'); // today, week, upcoming
+  const [animationEnabled] = useState(!window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  
+  const scheduleRef = useRef(null);
+  const listRef = useRef(null);
 
-const SportsSchedule = ({ 
-    compact = true, 
-    sports = ['nfl', 'nba', 'mlb', 'soccer'],
-    className = '' 
-}) => {
-    const [selectedSport, setSelectedSport] = useState(sports[0]);
-    const [selectedDate, setSelectedDate] = useState(moment().format('YYYY-MM-DD'));
-    const [isExpanded, setIsExpanded] = useState(false);
+  // Sports API configuration
+  const API_KEY = process.env.REACT_APP_SPORTS_API_KEY || 'demo';
+  const API_BASE = process.env.REACT_APP_SPORTS_API_BASE || 'https://api.sportsdata.io/v3';
 
-    // Sports data query
-    const {
-        data: sportsData,
-        isLoading,
-        error,
-        refetch
-    } = useQuery(
-        ['sports-schedule', selectedSport, selectedDate],
-        async () => {
-            const response = await axios.get(`${API_URL}/api/sports`, {
-                params: {
-                    sport: selectedSport,
-                    date: selectedDate,
-                    compact: compact && !isExpanded
-                },
-                timeout: 10000
-            });
+  // Available sports
+  const availableSports = [
+    { id: 'all', name: 'All Sports', icon: '🏆' },
+    { id: 'nfl', name: 'NFL', icon: '🏈' },
+    { id: 'nba', name: 'NBA', icon: '🏀' },
+    { id: 'mlb', name: 'MLB', icon: '⚾' },
+    { id: 'nhl', name: 'NHL', icon: '🏒' },
+    { id: 'soccer', name: 'Soccer', icon: '⚽' },
+    { id: 'tennis', name: 'Tennis', icon: '🎾' }
+  ];
 
-            return response.data;
+  // Fetch sports schedule
+  const { 
+    data: scheduleData, 
+    isLoading: scheduleLoading, 
+    error: scheduleError,
+    refetch: refetchSchedule 
+  } = useQuery(
+    ['sports-schedule', selectedSport, viewMode],
+    async () => {
+      if (API_KEY === 'demo') {
+        // Return demo data
+        return generateDemoData();
+      }
+
+      const endpoint = getAPIEndpoint(selectedSport, viewMode);
+      const response = await axios.get(endpoint, {
+        headers: {
+          'Ocp-Apim-Subscription-Key': API_KEY
         },
-        {
-            staleTime: 5 * 60 * 1000, // 5 minutes
-            cacheTime: 15 * 60 * 1000, // 15 minutes
-            refetchOnWindowFocus: true,
-            retry: 2
-        }
+        timeout: 5000
+      });
+      
+      return response.data;
+    },
+    {
+      staleTime: 5 * 60 * 1000, // 5 minutes
+      retry: 2,
+      onError: (error) => {
+        console.error('Sports schedule fetch error:', error);
+      }
+    }
+  );
+
+  // Generate demo data
+  const generateDemoData = () => {
+    const demoGames = [
+      {
+        id: '1',
+        homeTeam: 'Lakers',
+        awayTeam: 'Warriors',
+        homeScore: 108,
+        awayScore: 112,
+        status: 'Final',
+        date: moment().subtract(1, 'hour'),
+        sport: 'NBA',
+        icon: '🏀'
+      },
+      {
+        id: '2',
+        homeTeam: 'Chiefs',
+        awayTeam: 'Patriots',
+        homeScore: null,
+        awayScore: null,
+        status: 'Scheduled',
+        date: moment().add(2, 'hours'),
+        sport: 'NFL',
+        icon: '🏈'
+      },
+      {
+        id: '3',
+        homeTeam: 'Yankees',
+        awayTeam: 'Red Sox',
+        homeScore: 7,
+        awayScore: 4,
+        status: 'Final',
+        date: moment().subtract(3, 'hours'),
+        sport: 'MLB',
+        icon: '⚾'
+      },
+      {
+        id: '4',
+        homeTeam: 'Real Madrid',
+        awayTeam: 'Barcelona',
+        homeScore: null,
+        awayScore: null,
+        status: 'Scheduled',
+        date: moment().add(1, 'day'),
+        sport: 'Soccer',
+        icon: '⚽'
+      }
+    ];
+
+    return selectedSport === 'all' ? demoGames : demoGames.filter(game => 
+      game.sport.toLowerCase() === selectedSport
     );
+  };
 
-    const getSportIcon = useCallback((sport) => {
-        const iconMap = {
-            'nfl': '🏈',
-            'nba': '🏀',
-            'mlb': '⚾',
-            'nhl': '🏒',
-            'soccer': '⚽',
-            'tennis': '🎾',
-            'golf': '⛳',
-            'cricket': '🏏'
-        };
-        return iconMap[sport.toLowerCase()] || '🏆';
-    }, []);
-
-    const getSportName = useCallback((sport) => {
-        const nameMap = {
-            'nfl': 'NFL',
-            'nba': 'NBA',
-            'mlb': 'MLB',
-            'nhl': 'NHL',
-            'soccer': 'Soccer',
-            'tennis': 'Tennis',
-            'golf': 'Golf',
-            'cricket': 'Cricket'
-        };
-        return nameMap[sport.toLowerCase()] || sport.toUpperCase();
-    }, []);
-
-    const getGameStatus = useCallback((game) => {
-        const now = moment();
-        const gameTime = moment(game.startTime);
-        
-        if (game.status === 'completed' || game.finished) {
-            return { status: 'Final', color: '#6b7280', icon: '✅' };
-        }
-        
-        if (game.status === 'live' || game.inProgress) {
-            return { status: 'Live', color: '#dc2626', icon: '🔴' };
-        }
-        
-        if (gameTime.isBefore(now.add(2, 'hours'))) {
-            return { status: 'Starting Soon', color: '#d97706', icon: '⏰' };
-        }
-        
-        return { 
-            status: gameTime.format('h:mm A'), 
-            color: '#059669', 
-            icon: '📅' 
-        };
-    }, []);
-
-    const formatScore = useCallback((game) => {
-        if (game.homeScore !== undefined && game.awayScore !== undefined) {
-            return `${game.awayScore} - ${game.homeScore}`;
-        }
-        return null;
-    }, []);
-
-    const upcomingGames = useMemo(() => {
-        if (!sportsData?.games) return [];
-        return sportsData.games.filter(game => 
-            !game.finished && !game.status?.includes('completed')
-        );
-    }, [sportsData]);
-
-    const recentGames = useMemo(() => {
-        if (!sportsData?.games) return [];
-        return sportsData.games.filter(game => 
-            game.finished || game.status?.includes('completed')
-        );
-    }, [sportsData]);
-
-    const handleToggleExpanded = useCallback(() => {
-        setIsExpanded(!isExpanded);
-    }, [isExpanded]);
-
-    const handleSportChange = useCallback((sport) => {
-        setSelectedSport(sport);
-    }, []);
-
-    const handleDateChange = useCallback((date) => {
-        setSelectedDate(date);
-    }, []);
-
-    if (isLoading && !sportsData) {
-        return (
-            <div className={`sports-widget loading ${className}`}>
-                <div className="sports-loading">
-                    <span className="loading-icon">🏆</span>
-                    <span className="loading-text">Loading sports...</span>
-                </div>
-            </div>
-        );
+  // Get API endpoint based on sport and view mode
+  const getAPIEndpoint = (sport, mode) => {
+    const today = moment().format('YYYY-MM-DD');
+    
+    switch (sport) {
+      case 'nfl':
+        return `${API_BASE}/nfl/scores/json/ScoresByDate/${today}`;
+      case 'nba':
+        return `${API_BASE}/nba/scores/json/GamesByDate/${today}`;
+      case 'mlb':
+        return `${API_BASE}/mlb/scores/json/GamesByDate/${today}`;
+      default:
+        return `${API_BASE}/scores/json/GamesByDate/${today}`;
     }
+  };
 
-    if (error) {
-        return (
-            <div className={`sports-widget error ${className}`}>
-                <div className="sports-error">
-                    <span className="error-icon">❌</span>
-                    <button 
-                        onClick={refetch}
-                        className="retry-button"
-                        title="Retry sports data fetch"
-                    >
-                        🔄 Retry
-                    </button>
-                </div>
-            </div>
-        );
+  // Animation effects
+  useEffect(() => {
+    if (!scheduleRef.current || !animationEnabled) return;
+
+    gsap.fromTo(scheduleRef.current,
+      { y: 20, opacity: 0 },
+      { y: 0, opacity: 1, duration: 0.5, ease: "power2.out" }
+    );
+  }, [animationEnabled]);
+
+  useEffect(() => {
+    if (!listRef.current || !animationEnabled || !scheduleData) return;
+
+    gsap.fromTo('.game-card',
+      { x: -20, opacity: 0 },
+      { 
+        x: 0, 
+        opacity: 1, 
+        duration: 0.4, 
+        stagger: 0.1, 
+        ease: "power1.out" 
+      }
+    );
+  }, [scheduleData, animationEnabled]);
+
+  // Event handlers
+  const handleSportChange = useCallback((sportId) => {
+    setSelectedSport(sportId);
+    
+    if (window.gtag) {
+      window.gtag('event', 'sport_filter_change', {
+        event_category: 'Sports Schedule',
+        sport: sportId
+      });
     }
+  }, []);
 
-    if (!sportsData?.games || sportsData.games.length === 0) {
-        return (
-            <div className={`sports-widget no-data ${className}`}>
-                <div className="no-games-message">
-                    <span className="no-games-icon">{getSportIcon(selectedSport)}</span>
-                    <span className="no-games-text">No games today</span>
-                </div>
-            </div>
-        );
+  const handleViewModeChange = useCallback((mode) => {
+    setViewMode(mode);
+    
+    if (window.gtag) {
+      window.gtag('event', 'sports_view_change', {
+        event_category: 'Sports Schedule',
+        view_mode: mode
+      });
     }
+  }, []);
 
-    const nextGame = upcomingGames[0];
-    const lastGame = recentGames[0];
-    const displayGame = nextGame || lastGame || sportsData.games[0];
-
-    if (compact && !isExpanded) {
-        return (
-            <div 
-                className={`sports-widget compact ${className}`}
-                onClick={handleToggleExpanded}
-                role="button"
-                tabIndex={0}
-                onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                        e.preventDefault();
-                        handleToggleExpanded();
-                    }
-                }}
-                aria-label="Sports widget - click to expand"
-            >
-                <div className="sports-compact">
-                    <span className="sports-icon">
-                        {getSportIcon(selectedSport)}
-                    </span>
-                    <div className="game-info">
-                        <div className="teams">
-                            {displayGame.awayTeam?.abbreviation || displayGame.awayTeam?.name} @ {displayGame.homeTeam?.abbreviation || displayGame.homeTeam?.name}
-                        </div>
-                        <div className="game-time">
-                            {getGameStatus(displayGame).status}
-                        </div>
-                    </div>
-                </div>
-            </div>
-        );
+  // Format game status
+  const getGameStatus = (game) => {
+    if (game.status === 'Final') {
+      return { text: 'Final', color: '#059669' };
+    } else if (game.status === 'InProgress' || game.status === 'Live') {
+      return { text: 'Live', color: '#dc2626' };
+    } else if (game.status === 'Scheduled') {
+      return { 
+        text: moment(game.date).format('h:mm A'), 
+        color: '#64748b' 
+      };
+    } else {
+      return { text: game.status, color: '#64748b' };
     }
+  };
 
+  // Get sport icon
+  const getSportIcon = (sport) => {
+    const sportData = availableSports.find(s => s.name.toLowerCase() === sport.toLowerCase());
+    return sportData?.icon || '🏆';
+  };
+
+  // Loading state
+  if (scheduleLoading) {
     return (
-        <div className={`sports-widget expanded ${className}`}>
-            {/* Header */}
-            <div className="sports-header">
-                <div className="sports-title">
-                    <span className="title-icon">🏆</span>
-                    <span className="title-text">Sports</span>
-                </div>
-                
-                {compact && (
-                    <button
-                        className="collapse-btn"
-                        onClick={handleToggleExpanded}
-                        aria-label="Collapse sports widget"
-                    >
-                        ✕
-                    </button>
-                )}
-            </div>
-
-            {/* Sport Selector */}
-            {sports.length > 1 && (
-                <div className="sport-selector">
-                    {sports.map(sport => (
-                        <button
-                            key={sport}
-                            className={`sport-tab ${selectedSport === sport ? 'active' : ''}`}
-                            onClick={() => handleSportChange(sport)}
-                        >
-                            <span className="tab-icon">{getSportIcon(sport)}</span>
-                            <span className="tab-name">{getSportName(sport)}</span>
-                        </button>
-                    ))}
-                </div>
-            )}
-
-            {/* Date Selector */}
-            <div className="date-selector">
-                <div className="date-tabs">
-                    {[-1, 0, 1].map(dayOffset => {
-                        const date = moment().add(dayOffset, 'day');
-                        const dateStr = date.format('YYYY-MM-DD');
-                        const isToday = dayOffset === 0;
-                        
-                        return (
-                            <button
-                                key={dayOffset}
-                                className={`date-tab ${selectedDate === dateStr ? 'active' : ''}`}
-                                onClick={() => handleDateChange(dateStr)}
-                            >
-                                <div className="date-label">
-                                    {isToday ? 'Today' : dayOffset === -1 ? 'Yesterday' : 'Tomorrow'}
-                                </div>
-                                <div className="date-value">
-                                    {date.format('MMM D')}
-                                </div>
-                            </button>
-                        );
-                    })}
-                </div>
-            </div>
-
-            {/* Games List */}
-            <div className="games-container">
-                {/* Upcoming Games */}
-                {upcomingGames.length > 0 && (
-                    <div className="games-section">
-                        <h4 className="section-title">Upcoming</h4>
-                        <div className="games-list">
-                            {upcomingGames.slice(0, 5).map((game, index) => {
-                                const gameStatus = getGameStatus(game);
-                                
-                                return (
-                                    <div key={game.id || index} className="game-item upcoming">
-                                        <div className="game-teams">
-                                            <div className="team away">
-                                                <div className="team-info">
-                                                    <span className="team-name">
-                                                        {game.awayTeam?.name || 'Away'}
-                                                    </span>
-                                                    <span className="team-record">
-                                                        {game.awayTeam?.record}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                            
-                                            <div className="game-center">
-                                                <div className="game-time">
-                                                    <span className="status-icon">{gameStatus.icon}</span>
-                                                    <span 
-                                                        className="status-text"
-                                                        style={{ color: gameStatus.color }}
-                                                    >
-                                                        {gameStatus.status}
-                                                    </span>
-                                                </div>
-                                                {game.venue && (
-                                                    <div className="game-venue">
-                                                        📍 {game.venue}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            
-                                            <div className="team home">
-                                                <div className="team-info">
-                                                    <span className="team-name">
-                                                        {game.homeTeam?.name || 'Home'}
-                                                    </span>
-                                                    <span className="team-record">
-                                                        {game.homeTeam?.record}
-                                                    </span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                        
-                                        {game.broadcast && (
-                                            <div className="game-broadcast">
-                                                📺 {game.broadcast}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
-
-                {/* Recent/Live Games */}
-                {recentGames.length > 0 && (
-                    <div className="games-section">
-                        <h4 className="section-title">Recent Results</h4>
-                        <div className="games-list">
-                            {recentGames.slice(0, 5).map((game, index) => {
-                                const gameStatus = getGameStatus(game);
-                                const score = formatScore(game);
-                                
-                                return (
-                                    <div key={game.id || index} className="game-item completed">
-                                        <div className="game-teams">
-                                            <div className="team away">
-                                                <div className="team-info">
-                                                    <span className="team-name">
-                                                        {game.awayTeam?.name || 'Away'}
-                                                    </span>
-                                                    {score && (
-                                                        <span className="team-score">
-                                                            {game.awayScore}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                            
-                                            <div className="game-center">
-                                                <div className="game-result">
-                                                    <span className="status-icon">{gameStatus.icon}</span>
-                                                    <span className="status-text">
-                                                        {gameStatus.status}
-                                                    </span>
-                                                </div>
-                                                {score && (
-                                                    <div className="final-score">
-                                                        {score}
-                                                    </div>
-                                                )}
-                                            </div>
-                                            
-                                            <div className="team home">
-                                                <div className="team-info">
-                                                    <span className="team-name">
-                                                        {game.homeTeam?.name || 'Home'}
-                                                    </span>
-                                                    {score && (
-                                                        <span className="team-score">
-                                                            {game.homeScore}
-                                                        </span>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-                        </div>
-                    </div>
-                )}
-            </div>
-
-            {/* Footer */}
-            <div className="sports-footer">
-                <div className="update-info">
-                    <span className="update-time">
-                        Updated {moment(sportsData.lastUpdated || Date.now()).fromNow()}
-                    </span>
-                    {sportsData.source && (
-                        <span className="data-source">
-                            via {sportsData.source}
-                        </span>
-                    )}
-                </div>
-                
-                <button
-                    onClick={refetch}
-                    className="refresh-btn"
-                    title="Refresh sports data"
-                    disabled={isLoading}
-                >
-                    🔄
-                </button>
-            </div>
+      <div ref={scheduleRef} className="sports-schedule loading">
+        <div className="sports-loading">
+          <div className="loading-icon">🏆</div>
+          <p>Loading sports schedule...</p>
         </div>
+      </div>
     );
+  }
+
+  // Error state
+  if (scheduleError) {
+    return (
+      <div ref={scheduleRef} className="sports-schedule error">
+        <div className="sports-error">
+          <div className="error-icon">⚠️</div>
+          <h3>Sports Schedule Unavailable</h3>
+          <p>{scheduleError?.message || 'Failed to load sports data'}</p>
+          <button onClick={refetchSchedule} className="retry-btn">
+            🔄 Retry
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Compact view
+  if (compact) {
+    const recentGames = scheduleData?.slice(0, 3) || [];
+    
+    return (
+      <div ref={scheduleRef} className="sports-schedule compact">
+        <div className="sports-header">
+          <h4>🏆 Sports</h4>
+          {API_KEY === 'demo' && <span className="demo-badge">Demo</span>}
+        </div>
+        <div className="games-compact">
+          {recentGames.map(game => {
+            const status = getGameStatus(game);
+            return (
+              <div key={game.id} className="game-compact">
+                <span className="game-teams">
+                  {game.awayTeam} @ {game.homeTeam}
+                </span>
+                <span className="game-score">
+                  {game.homeScore !== null ? `${game.awayScore}-${game.homeScore}` : status.text}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  // Full sports schedule
+  return (
+    <div ref={scheduleRef} className="sports-schedule">
+      <div className="sports-header">
+        <div className="header-title">
+          <h2>🏆 Sports Schedule</h2>
+          {API_KEY === 'demo' && <span className="demo-badge">Demo Data</span>}
+        </div>
+
+        <div className="sports-controls">
+          {/* Sport Filter */}
+          <div className="sport-filter">
+            <label htmlFor="sport-select">Sport:</label>
+            <select 
+              id="sport-select"
+              value={selectedSport} 
+              onChange={(e) => handleSportChange(e.target.value)}
+              className="sport-select"
+            >
+              {availableSports.map(sport => (
+                <option key={sport.id} value={sport.id}>
+                  {sport.icon} {sport.name}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* View Mode Toggle */}
+          <div className="view-mode-toggle">
+            {['today', 'week', 'upcoming'].map(mode => (
+              <button
+                key={mode}
+                className={`view-btn ${viewMode === mode ? 'active' : ''}`}
+                onClick={() => handleViewModeChange(mode)}
+              >
+                {mode.charAt(0).toUpperCase() + mode.slice(1)}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div ref={listRef} className="games-list">
+        {scheduleData && scheduleData.length > 0 ? (
+          scheduleData.map(game => {
+            const status = getGameStatus(game);
+            
+            return (
+              <div key={game.id} className="game-card">
+                <div className="game-header">
+                  <span className="sport-icon">
+                    {getSportIcon(game.sport)}
+                  </span>
+                  <span className="game-sport">{game.sport}</span>
+                  <span 
+                    className="game-status"
+                    style={{ color: status.color }}
+                  >
+                    {status.text}
+                  </span>
+                </div>
+
+                <div className="game-matchup">
+                  <div className="team away-team">
+                    <span className="team-name">{game.awayTeam}</span>
+                    {game.awayScore !== null && (
+                      <span className="team-score">{game.awayScore}</span>
+                    )}
+                  </div>
+                  
+                  <div className="matchup-divider">@</div>
+                  
+                  <div className="team home-team">
+                    <span className="team-name">{game.homeTeam}</span>
+                    {game.homeScore !== null && (
+                      <span className="team-score">{game.homeScore}</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="game-details">
+                  <span className="game-time">
+                    📅 {moment(game.date).format('MMM D, h:mm A')}
+                  </span>
+                  {game.venue && (
+                    <span className="game-venue">
+                      📍 {game.venue}
+                    </span>
+                  )}
+                </div>
+              </div>
+            );
+          })
+        ) : (
+          <div className="no-games">
+            <div className="no-games-icon">🏆</div>
+            <h3>No games scheduled</h3>
+            <p>Check back later for upcoming games</p>
+          </div>
+        )}
+      </div>
+
+      <div className="sports-footer">
+        <div className="last-updated">
+          Updated: {moment().format('HH:mm')}
+        </div>
+        <button 
+          onClick={refetchSchedule} 
+          className="refresh-btn"
+          disabled={scheduleLoading}
+          title="Refresh sports data"
+        >
+          🔄 Refresh
+        </button>
+      </div>
+    </div>
+  );
 };
+
+SportsSchedule.displayName = 'SportsSchedule';
 
 export default SportsSchedule;
